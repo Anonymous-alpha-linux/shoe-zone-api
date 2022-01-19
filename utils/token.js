@@ -6,14 +6,14 @@ class Token {
     }
 
     createToken() {
-        console.log('starting to create new token');
+
         return jwt.sign(this.payload, process.env.JSON_SECRETE_TOKEN, {
             expiresIn: 60 * 12,
         });
     }
 
     async createRefreshToken() {
-        console.log('starting to create new refresh token');
+
         return jwt.sign(this.payload, process.env.JSON_REFRESH_TOKEN,
             {
                 expiresIn: '2d'

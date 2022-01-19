@@ -6,7 +6,7 @@ const { emailService, isAuthentication, isAuthorization, Token } = require('../u
 var router = express.Router();
 /* GET home page. */
 router.get('/', (req, res) => {
-    console.log("open auth");
+
     return res.status(200).redirect('/api/v1/login').json({
         message: 'ok'
     });
@@ -14,11 +14,11 @@ router.get('/', (req, res) => {
 
 router.route('/register').post(async function (req, res) {
     const { email, username, password, role, profileImage } = req.body;
-    console.log(email, username, password, role, profileImage);
+
 
 
     try {
-        console.log("registering...");
+
         // 1. Validate email and password input are empty
         if (!email) throw new Error("Fullfill your email");
         if (!password) throw new Error("Please input your password");
@@ -70,7 +70,6 @@ router.route('/register').post(async function (req, res) {
 
 router.route('/login').post(async function (req, res, next) {
     const { email, password } = req.body;
-    console.log("Signing in...")
     try {
         // 1. Validate email, username, password is empty 
         if (!email) throw new Error("Fullfill your email");

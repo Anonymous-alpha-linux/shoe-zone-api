@@ -15,8 +15,6 @@ module.exports = async function isAuthentication(req, res, next) {
 
         const account = await Account.findById(tokenData.id);
         const role = await Role.findById(tokenData.roleId);
-        console.log(tokenData, account, role);
-        console.log("start authenticate");
 
 
         req.user = {
