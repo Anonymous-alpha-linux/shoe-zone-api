@@ -10,16 +10,15 @@ module.exports = async function isAuthentication(req, res, next) {
         const token = authorization.split(' ')[1];
         if (!token) throw new Error("Token is expired!");
 
-
         const tokenData = Token.verifyToken(token);
 
         const account = await Account.findById(tokenData.id);
         const role = await Role.findById(tokenData.roleId);
 
-
         req.user = {
             account: account.username,
-            role: role.roleName
+            role: role.roleName,
+            accessToken: token
         }
 
         next();

@@ -6,12 +6,11 @@ const { emailService, isAuthentication, isAuthorization, Token } = require('../u
 var router = express.Router();
 /* GET home page. */
 router.get('/', (req, res) => {
-
-    return res.status(200).redirect('/api/v1/login').json({
-        message: 'ok'
+    if (req.user) return res.status(200).json({
+        ...req.user
     });
+    return res.status(200).redirect('/api/v1/auth/login');
 });
-
 router.route('/register').post(async function (req, res) {
     const { email, username, password, role, profileImage } = req.body;
 
@@ -68,58 +67,68 @@ router.route('/register').post(async function (req, res) {
     }
 });
 
-router.route('/login').post(async function (req, res, next) {
-    const { email, password } = req.body;
-    try {
-        // 1. Validate email, username, password is empty 
-        if (!email) throw new Error("Fullfill your email");
-        if (!password) throw new Error("Please input your password");
+router.route('/login')
+    .get(function (req, res) {
+        console.log(req.user);
+        if (req.user) {
+            console.log('user req', req.user);
+            return res.status(200).json({
+                isLoggedIn: true,
+                ...req.user,
+            });
+        }
 
-        // 2. Validate user is existed
-        const user = await Account.findOne({ email: email }).exec();
-        if (!user) throw new Error("Maybe you forgot username or password");
-
-        // 3. Validate the log user password is capable
-        const isCapable = await bcryptjs.compare(password, user.hashPassword);
-        if (!isCapable) throw new Error("your password is incorrect");
-        // 4. Create a new token and send to user for the further authentication
-        let token = new Token({
-            id: user._id,
-            roleId: user.role._id
-        });
-
-        let accessToken = token.createToken();
-
-        Token.sendToken(200, accessToken, res).json({
-            isLoggedIn: true,
-            success: true,
-            message: "Login successfully",
-            accessToken
-        });
-
-    } catch (err) {
-        res.send({
-            isLoggedIn: false,
-            success: false,
-            error: err.message,
+        return res.json({
+            message: "Login first",
         })
-    }
-})
+    })
+    .post(async function (req, res, next) {
+        const { email, password } = req.body;
+        try {
+            // 1. Validate email, username, password is empty 
+            if (!email) throw new Error("Fullfill you   r email");
+            if (!password) throw new Error("Please input your password");
 
-// router.route('/protected').get(isAuthentication, isAuthorization('admin', 'staff'), async function (req, res, next) {
-//     try {
-//         res.send({
-//             isLoggedIn: true,
-//             success: true,
-//             message: 'Access to route'
-//         })
-//     } catch (e) {
-//         res.send({
-//             success: false,
-//             error: err.message,
-//         })
-//     }
-// })
+            // 2. Validate user is existed
+            const user = await Account.findOne({ email: email }).exec();
+            if (!user) throw new Error("Maybe you forgot username or password");
+
+            // 3. Validate the log user password is capable
+            const isCapable = await bcryptjs.compare(password, user.hashPassword);
+            if (!isCapable) throw new Error("your password is incorrect");
+            // 4. Create a new token and send to user for the further authentication
+            let token = new Token({
+                id: user._id,
+                roleId: user.role._id
+            });
+
+            let accessToken = token.createToken();
+            console.log('accessToken', accessToken);
+
+            return res.status(200).cookie('accessToken', accessToken, {
+                httpOnly: true,
+            }).json({
+                isLoggedIn: true,
+                success: true,
+                message: "Login successfully",
+                accessToken
+            });
+            // Token.sendToken(200, accessToken, res).json({
+            //     isLoggedIn: true,
+            //     success: true,
+            //     message: "Login successfully",
+            //     accessToken
+            // });
+
+        } catch (err) {
+            res.send({
+                isLoggedIn: false,
+                success: false,
+                error: err.message,
+            })
+        }
+    })
+
 
 router.route('/logout').get(async function (req, res, next) {
 
@@ -153,4 +162,18 @@ router.post('/forgot', async function (req, res, next) {
     }
 })
 
+// router.route('/protected').get(isAuthentication, isAuthorization('admin', 'staff'), async function (req, res, next) {
+//     try {
+//         res.send({
+//             isLoggedIn: true,
+//             success: true,
+//             message: 'Access to route'
+//         })
+//     } catch (e) {
+//         res.send({
+//             success: false,
+//             error: err.message,
+//         })
+//     }
+// })
 module.exports = router;

@@ -6,9 +6,8 @@ class Token {
     }
 
     createToken() {
-
         return jwt.sign(this.payload, process.env.JSON_SECRETE_TOKEN, {
-            expiresIn: 60 * 12,
+            expiresIn: '1h',
         });
     }
 
@@ -26,6 +25,7 @@ class Token {
         return jwt.verify(token, process.env.JSON_REFRESH_TOKEN)
     }
     static sendToken(status, accessToken, res) {
+        console.log('send token');
         return res.status(status).cookie('accessToken', accessToken, {
             httpOnly: true,
         });
