@@ -11,7 +11,7 @@ const cors = require('cors');
 server.use(express.json()); // supporting the json body parser
 server.use(express.urlencoded({ extended: true })); // supporting the encoded url parser 
 server.use(cors({
-    origin: 'https://shoes-shop-app.netlify.app'
+    origin: '*'
 }))
 
 // 2. Authentication
