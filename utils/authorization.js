@@ -4,7 +4,6 @@ module.exports = (...roles) => {
             if (!roles.includes(req.user.role)) {
                 throw new Error("You are not allowed to access this route");
             }
-
             next();
         }
         catch (e) {

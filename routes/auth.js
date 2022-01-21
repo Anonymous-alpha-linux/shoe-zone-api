@@ -5,67 +5,80 @@ const { emailService, isAuthentication, isAuthorization, Token } = require('../u
 // const { emailService } = require('../utils');
 var router = express.Router();
 /* GET home page. */
-router.get('/', (req, res) => {
+router.get('/', isAuthentication, (req, res) => {
+    console.log('request.user :', req.user);
+
     if (req.user) return res.status(200).json({
+        isLoggedIn: true,
+        success: true,
         ...req.user
     });
-    return res.status(200).redirect('/api/v1/auth/login');
+
+    return res.status(200).json({
+        isLoggedIn: false,
+        success: false,
+        message: "Login First for authentication"
+    });
 });
-router.route('/register').post(async function (req, res) {
-    const { email, username, password, role, profileImage } = req.body;
+
+
+router.route('/register')
+    .post(async function (req, res) {
+        const { email, username, password, role, profileImage } = req.body;
 
 
 
-    try {
+        try {
 
-        // 1. Validate email and password input are empty
-        if (!email) throw new Error("Fullfill your email");
-        if (!password) throw new Error("Please input your password");
+            // 1. Validate email and password input are empty
+            if (!email) throw new Error("Fullfill your email");
+            if (!password) throw new Error("Please input your password");
 
 
-        const duplicateUser = await Account.findOne({ email: email }).exec();
-        const assignedRole = await Role.findOne({ roleName: role }).exec();
-        // 2. Validate user is duplicate and role is existed
-        if (duplicateUser) throw new Error("User has been exist");
-        if (!assignedRole) throw new Error("There are no capable role to authorize");
+            const duplicateUser = await Account.findOne({ email: email }).exec();
+            const assignedRole = await Role.findOne({ roleName: role }).exec();
+            // 2. Validate user is duplicate and role is existed
+            if (duplicateUser) throw new Error("User has been exist");
+            if (!assignedRole) throw new Error("There are no capable role to authorize");
 
-        // 3. Create and save new Account to database
-        const newAccount = await Account.create({
-            username: username,
-            hashPassword: await bcryptjs.hash(password, 10),
-            email: email,
-            profileImage: profileImage,
-            role: assignedRole && assignedRole._id,
-        });
+            // 3. Create and save new Account to database
+            const newAccount = await Account.create({
+                username: username,
+                hashPassword: await bcryptjs.hash(password, 10),
+                email: email,
+                profileImage: profileImage,
+                role: assignedRole && assignedRole._id,
+            });
 
-        // 4. Send email for confirmation
-        // const emailService = new emailService(email, 'Nodemailer Service Testing');
+            // 4. Send email for confirmation
+            // const emailService = new emailService(email, 'Nodemailer Service Testing');
 
-        // await emailService.send();
+            // await emailService.send();
 
-        // 5. Create a new Token and send to user for the further authentication
-        let token = new Token({
-            email,
-            role,
-        });
+            // 5. Create a new Token and send to user for the further authentication
+            let token = new Token({
+                email,
+                role,
+            });
 
-        let accessToken = token.createToken();
+            let accessToken = token.createToken();
 
-        Token.sendToken(201, accessToken, res).json({
-            isLoggedIn: true,
-            success: true,
-            message: 'User has been created',
-            accessToken
-        })
+            Token.sendToken(201, accessToken, res).json({
+                isLoggedIn: true,
+                success: true,
+                message: 'User has been created',
+                accessToken
+            })
 
-    } catch (err) {
-        res.send({
-            isLoggedIn: false,
-            success: false,
-            error: err.message,
-        })
-    }
-});
+        } catch (err) {
+            res.send({
+                isLoggedIn: false,
+                success: false,
+                error: err.message,
+            })
+        }
+    });
+
 
 router.route('/login')
     .get(function (req, res) {
@@ -86,7 +99,7 @@ router.route('/login')
         const { email, password } = req.body;
         try {
             // 1. Validate email, username, password is empty 
-            if (!email) throw new Error("Fullfill you   r email");
+            if (!email) throw new Error("Fullfill your email");
             if (!password) throw new Error("Please input your password");
 
             // 2. Validate user is existed
@@ -103,6 +116,7 @@ router.route('/login')
             });
 
             let accessToken = token.createToken();
+
             console.log('accessToken', accessToken);
 
             return res.status(200).cookie('accessToken', accessToken, {
@@ -128,13 +142,11 @@ router.route('/login')
             })
         }
     })
-
-
 router.route('/logout').get(async function (req, res, next) {
 
     res.clearCookie('accessToken', {
         httpOnly: true
-    })
+    });
 
     res.status(200).json({
         isLoggedIn: false,
