@@ -30,7 +30,7 @@ const accountSchema = new Schema({
     },
     profileImage: {
         type: String,
-        default: 'https://laptrinhcuocsong.com/images/anh-vui-lap-trinh-vien-7.png'
+        default: 'https://laptrinhcuocsong.com/images/anh-vui-lap-trinh-vien-7.png',
     },
     createdAt: {
         type: Date,

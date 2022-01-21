@@ -24,12 +24,8 @@ router.get('/', isAuthentication, (req, res) => {
 
 router.route('/register')
     .post(async function (req, res) {
-        const { email, username, password, role, profileImage } = req.body;
-
-
-
+        const { email, username, password, role = "customer", profileImage } = req.body;
         try {
-
             // 1. Validate email and password input are empty
             if (!email) throw new Error("Fullfill your email");
             if (!password) throw new Error("Please input your password");
@@ -46,7 +42,7 @@ router.route('/register')
                 username: username,
                 hashPassword: await bcryptjs.hash(password, 10),
                 email: email,
-                profileImage: profileImage,
+                profileImage: profileImage || 'https://laptrinhcuocsong.com/images/anh-vui-lap-trinh-vien-7.png',
                 role: assignedRole && assignedRole._id,
             });
 
@@ -57,8 +53,8 @@ router.route('/register')
 
             // 5. Create a new Token and send to user for the further authentication
             let token = new Token({
-                email,
-                role,
+                id: newAccount._id,
+                roleId: newAccount.role._id
             });
 
             let accessToken = token.createToken();

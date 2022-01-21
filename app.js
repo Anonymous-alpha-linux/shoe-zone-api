@@ -5,7 +5,6 @@ const server = express();
 const routes = require('./routes');
 const { isAuthentication, isAuthorization } = require('./utils');
 const cors = require('cors');
-// const { sqlExpressConnect } = require('./config');
 
 // 1. Using middleware
 server.use(express.json()); // supporting the json body parser
@@ -26,7 +25,6 @@ server.use('/api/v1/customer', isAuthentication, isAuthorization("admin", "staff
 // 2.5. checkout
 server.use('/api/v1/checkout', isAuthentication, routes.payment);
 
-
 // Catch page error with server routing
 server.use((req, res) => {
     res.status(404).json({
@@ -34,15 +32,7 @@ server.use((req, res) => {
     })
 })
 
-
-
-
 // implementing our server
-// server.listen(process.env.PORT || 5000, async () => {
-//     console.log(await config.sqlExpressConnect().then(pool => {
-//     }));
-//     console.log('The server is running at ', process.env.PORT || 5000);
-// })
 connectToMongo(client => {
     server.listen(process.env.PORT || 5000, () => {
         console.log("Server is running on", process.env.PORT);
