@@ -63,7 +63,9 @@ router.route('/register')
                 isLoggedIn: true,
                 success: true,
                 message: 'User has been created',
-                accessToken
+                accessToken,
+                account: newAccount.username,
+                role: newAccount.role.roleName
             })
 
         } catch (err) {
@@ -121,7 +123,9 @@ router.route('/login')
                 isLoggedIn: true,
                 success: true,
                 message: "Login successfully",
-                accessToken
+                accessToken,
+                account: user.username,
+                role: user.role.roleName
             });
             // Token.sendToken(200, accessToken, res).json({
             //     isLoggedIn: true,
