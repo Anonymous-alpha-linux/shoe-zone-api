@@ -10,7 +10,8 @@ const cors = require('cors');
 server.use(express.json()); // supporting the json body parser
 server.use(express.urlencoded({ extended: true })); // supporting the encoded url parser 
 server.use(cors({
-    origin: 'http://localhost:3000'
+    origin: ['http://localhost:3000', 'https://shoe-shop-app.netlify.app'],
+    optionsSuccessStatus: 200
 }))
 
 // 2. Authentication
@@ -24,6 +25,13 @@ server.use('/api/v1/staff', isAuthentication, isAuthorization("staff"), routes.a
 server.use('/api/v1/customer', isAuthentication, isAuthorization("admin", "staff", "customer"), routes.users);
 // 2.5. checkout
 server.use('/api/v1/checkout', isAuthentication, routes.payment);
+
+server.all('*', function (req, res, next) {
+    var origin = cors.origin.indexOf(req.header('origin').toLowerCase()) > -1 ? req.headers.origin : cors.default;
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    next();
+});
 
 // Catch page error with server routing
 server.use((req, res) => {

@@ -7,7 +7,6 @@ var router = express.Router();
 /* GET home page. */
 router.get('/', isAuthentication, (req, res) => {
 
-
     if (req.user) return res.status(200).json({
         isLoggedIn: true,
         success: true,
