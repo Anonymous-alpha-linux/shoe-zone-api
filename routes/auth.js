@@ -6,7 +6,7 @@ const { emailService, isAuthentication, isAuthorization, Token } = require('../u
 var router = express.Router();
 /* GET home page. */
 router.get('/', isAuthentication, (req, res) => {
-    console.log('request.user :', req.user);
+
 
     if (req.user) return res.status(200).json({
         isLoggedIn: true,
@@ -79,9 +79,9 @@ router.route('/register')
 
 router.route('/login')
     .get(function (req, res) {
-        console.log(req.user);
+
         if (req.user) {
-            console.log('user req', req.user);
+
             return res.status(200).json({
                 isLoggedIn: true,
                 ...req.user,
@@ -101,7 +101,7 @@ router.route('/login')
 
             // 2. Validate user is existed
             const user = await Account.findOne({ email: email }).exec();
-            const role = await Role.findOne({ id = user.role._id }).exec();
+            const role = await Role.findOne({ id: user.role._id }).exec();
             if (!user) throw new Error("Maybe you forgot username or password");
 
             // 3. Validate the log user password is capable
@@ -115,7 +115,7 @@ router.route('/login')
 
             let accessToken = token.createToken();
 
-            console.log('accessToken', accessToken);
+
 
             return res.status(200).cookie('accessToken', accessToken, {
                 httpOnly: true,

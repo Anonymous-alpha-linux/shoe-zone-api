@@ -10,7 +10,7 @@ const cors = require('cors');
 server.use(express.json()); // supporting the json body parser
 server.use(express.urlencoded({ extended: true })); // supporting the encoded url parser 
 server.use(cors({
-    origin: '*'
+    origin: 'http://localhost:3000'
 }))
 
 // 2. Authentication
