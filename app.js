@@ -1,10 +1,11 @@
 require('dotenv/config');
 const express = require('express');
 const { connectToMongo } = require('./config');
-const server = express();
-const routes = require('./routes');
-const { isAuthentication, isAuthorization } = require('./utils');
 const cors = require('cors');
+const routes = require('./routes');
+
+const server = express();
+const { isAuthentication, isAuthorization, EmailService } = require('./utils');
 
 // 1. Using middleware
 server.use(express.json()); // supporting the json body parser
@@ -25,6 +26,41 @@ server.use('/api/v1/staff', isAuthentication, isAuthorization("staff"), routes.a
 server.use('/api/v1/customer', isAuthentication, isAuthorization("admin", "staff", "customer"), routes.users);
 // 2.5. checkout
 server.use('/api/v1/checkout', isAuthentication, routes.payment);
+
+server.get('/send', async (req, res) => {
+    try {
+        const email = new EmailService('pornhudpremium@gmail.com', process.env.NODEMAILER_SENDER);
+        await email.sendEmail();
+        res.status(200).send('send successully');
+    } catch (error) {
+        res.send(error.message)
+    }
+    // try {
+    //     let transporter = nodemailer.createTransport({
+    //         service: 'gmail',// true for 465, false for other ports
+    //         port: 587,
+    //         auth: {
+    //             user: process.env.GMAIL_USER, // generated ethereal user
+    //             pass: process.env.GMAIL_PASS, // generated ethereal password
+    //         },
+    //         secure: true,
+    //     });
+    //     transporter.sendMail({
+    //         from: process.env.NODEMAILER_SENDER, // sender address
+    //         to: 'pornhudpremium@gmail.com', // list of receivers
+    //         subject: "You have signed up successfully", // Subject line
+    //         text: `Dear customer`, // plain text body
+    //         html: "<h2>Thank you for your joining to our service</h2>", // html body
+    //     }, (err, info) => {
+    //         if (err) {
+    //             throw new Error(err.message)
+    //         }
+    //         res.status(200).send(info.messageId);
+    //     });
+    // } catch (error) {
+    //     res.send(error.message)
+    // }
+});
 
 server.all('*', function (req, res, next) {
     var origin = cors.origin.indexOf(req.header('origin').toLowerCase()) > -1 ? req.headers.origin : cors.default;

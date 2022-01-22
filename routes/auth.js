@@ -1,7 +1,7 @@
 const bcryptjs = require('bcryptjs');
 var express = require('express');
 const { Account, Role } = require('../models');
-const { emailService, isAuthentication, isAuthorization, Token } = require('../utils');
+const { EmailService, isAuthentication, isAuthorization, Token } = require('../utils');
 // const { emailService } = require('../utils');
 var router = express.Router();
 /* GET home page. */
@@ -35,6 +35,7 @@ router.route('/register')
             if (duplicateUser) throw new Error("User has been exist");
             if (!assignedRole) throw new Error("There are no capable role to authorize");
 
+
             // 3. Create and save new Account to database
             const newAccount = await Account.create({
                 username: username,
@@ -43,11 +44,10 @@ router.route('/register')
                 profileImage: profileImage || 'https://laptrinhcuocsong.com/images/anh-vui-lap-trinh-vien-7.png',
                 role: assignedRole && assignedRole._id,
             });
-
             // 4. Send email for confirmation
-            // const emailService = new emailService(email, 'Nodemailer Service Testing');
-
-            // await emailService.send();
+            console.log('register email', email);
+            const emailServ = new EmailService(email, process.env.NODEMAILER_SENDER);
+            emailServ.sendEmail();
 
             // 5. Create a new Token and send to user for the further authentication
             let token = new Token({
@@ -56,7 +56,6 @@ router.route('/register')
             });
 
             let accessToken = token.createToken();
-
             Token.sendToken(201, accessToken, res).json({
                 isLoggedIn: true,
                 success: true,
