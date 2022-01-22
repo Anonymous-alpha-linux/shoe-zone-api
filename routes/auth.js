@@ -21,7 +21,6 @@ router.get('/', isAuthentication, (req, res) => {
     });
 });
 
-
 router.route('/register')
     .post(async function (req, res) {
         const { email, username, password, role = "customer", profileImage } = req.body;
@@ -63,7 +62,9 @@ router.route('/register')
                 isLoggedIn: true,
                 success: true,
                 message: 'User has been created',
-                accessToken
+                accessToken,
+                account: newAccount.username,
+                role: role
             })
 
         } catch (err) {
@@ -100,6 +101,7 @@ router.route('/login')
 
             // 2. Validate user is existed
             const user = await Account.findOne({ email: email }).exec();
+            const role = await Role.findOne({ id = user.role._id }).exec();
             if (!user) throw new Error("Maybe you forgot username or password");
 
             // 3. Validate the log user password is capable
@@ -121,7 +123,9 @@ router.route('/login')
                 isLoggedIn: true,
                 success: true,
                 message: "Login successfully",
-                accessToken
+                accessToken,
+                account: user.username,
+                role: role.roleName
             });
             // Token.sendToken(200, accessToken, res).json({
             //     isLoggedIn: true,
@@ -138,6 +142,7 @@ router.route('/login')
             })
         }
     })
+
 router.route('/logout').get(async function (req, res, next) {
 
     res.clearCookie('accessToken', {
