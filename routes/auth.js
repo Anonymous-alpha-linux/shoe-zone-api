@@ -99,7 +99,7 @@ router.route('/login')
 
             // 2. Validate user is existed
             const user = await Account.findOne({ email: email }).exec();
-            const role = await Role.findOne({ id: user.role._id }).exec();
+            const role = await Role.findOne({ _id: user.role._id }).exec();
             if (!user) throw new Error("Maybe you forgot username or password");
 
             // 3. Validate the log user password is capable
