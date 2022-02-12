@@ -15,5 +15,32 @@ const userSchema = new mongoose.Schema({
     },
     address: {
         type: String,
-    }
+    },
+    position: {
+        type: String,
+        required: false,
+    },
+    gender: {
+        type: String,
+        require: false,
+    },
+    brithDate: {
+        type: String,
+        require: false,
+    },
+    Department: {
+        type: String,
+        require: false,
+    },
+    Contribution: {
+        type: Number,
+        require: false,
+    },
+
+    updatedAt: {
+        type: Date,
+        default: () => Date.now(),
+    },
 })
+
+module.exports = mongoose.model('UserProfile',userSchema);

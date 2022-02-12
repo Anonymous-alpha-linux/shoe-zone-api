@@ -4,6 +4,9 @@ const { connectToMongo } = require('./config');
 const cors = require('cors');
 const routes = require('./routes');
 
+const User = require("./models/User")
+
+
 const server = express();
 const { isAuthentication, isAuthorization, EmailService } = require('./utils');
 
@@ -82,4 +85,27 @@ connectToMongo(client => {
         console.log("Server is running on", process.env.PORT);
     })
 })
+
+
+// const Post = require('./models')
+// // implementing our server
+// connectToMongo(client => {
+//     server.listen(process.env.PORT || 5000, async () => {
+//         await(async function (){
+//             try{
+//                  const post = await Post.where("Title").equals('').exec();
+//                 // const post = await Post.create({
+//                 //     title : "start",
+//                 //     content : "Try to post",
+//                 // })
+//                 // await post.save();
+//                 console.log(post);
+//             }catch(err){
+//                 console.log(err.errors)
+//             }
+            
+//         })()
+//         console.log("Server is running on", process.env.PORT);
+//     })
+// })
 
