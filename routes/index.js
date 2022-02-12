@@ -1,7 +1,7 @@
 module.exports = {
-  users: require('./users'),
+  staff: require('./staff'),
   auth: require('./auth'),
   admin: require('./admin'),
-  staff: require('./manager'),
+  QA_manager: require('./manager'),
   payment: require('./payment')
 }

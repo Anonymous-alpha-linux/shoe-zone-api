@@ -1,28 +1,19 @@
 // const mongo = require('mongodb');
 // const { MongoContext } = require('../config');
-const { Schema, model } = require('mongoose');
-// class Account {
-//     constructor(username, email, password) {
-//         this.username = username;
-//         this.email = email;
-//         this.hashPassword = password;
-//     }
-//     save() {
-//         const db = MongoContext.getDb();
-//         console.log(db.collection('accounts').)
-//     }
-// }
+const { Schema, model, SchemaTypes } = require('mongoose');
 
 const accountSchema = new Schema({
     username: {
         type: String,
         required: true,
-        unique: true
+        unique: true,
+        maxlength: 20
     },
     email: {
         type: String,
         required: true,
-        unique: true
+        unique: true,
+        maxlength: 100
     },
     hashPassword: {
         type: String,
@@ -41,11 +32,15 @@ const accountSchema = new Schema({
         ref: 'Role',
         require: true,
     },
+    workspace: {
+        type: SchemaTypes.ObjectId,
+        ref: 'Workspace',
+        required: false
+    },
     refreshToken: String,
 }, {
     timestamps: true
-})
+});
 
-const Account = model('Account', accountSchema);
-module.exports = Account;
+module.exports = model('Account', accountSchema);;
 

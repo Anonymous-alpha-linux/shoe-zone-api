@@ -1,11 +1,43 @@
 require('dotenv/config');
-const express = require('express');
-const { connectToMongo } = require('./config');
-const cors = require('cors');
 const routes = require('./routes');
+const { connectToMongo } = require('./config');
+const { isAuthentication, isAuthorization, EmailService } = require('./utils');
+const { roles } = require('./fixtures');
+
+const http = require('http');
+const express = require('express');
+const cors = require('cors');
+const multer = require('multer');
+const { Server } = require('socket.io');
+const fs = require('fs');
 
 const server = express();
-const { isAuthentication, isAuthorization, EmailService } = require('./utils');
+const httpServer = http.createServer(server);
+
+const io = new Server(httpServer, {
+    cors: {
+        origin: ['http://localhost:3000', 'http://localhost:4000', 'https://cms-fstaff.netlify.app/'],
+    }
+});
+const storage = multer.diskStorage({
+    destination: function (req, res, cb) {
+        const { accountId, account, role } = req.user,
+            { view } = req.query,
+            path = view === 'profile' ? `./public/images/${accountId}` : `./public/documents/${role}/${account + '-' + accountId}`;
+        fs.mkdirSync(path, { recursive: true });
+        cb(null, path)
+    },
+    filename: function (req, file, cb) {
+        const { account, role } = req.user;
+        cb(null, `[${role.toUpperCase()}]` + account + '-' + + Date.now() + '-' + file.originalname);
+    }
+})
+const upload = multer({
+    storage: storage,
+    limits: {
+        fileSize: 1024 * 1024 * 5
+    }
+})
 
 // 1. Using middleware
 server.use(express.json()); // supporting the json body parser
@@ -19,56 +51,46 @@ server.use(cors({
 // 2.1. authentications
 server.use('/api/v1/auth', routes.auth);
 // 2.2. admin
-server.use('/api/v1/admin', isAuthentication, isAuthorization("admin"), routes.admin);
+// server.use('/api/v1/admin', isAuthentication, isAuthorization(roles.ADMIN), routes.admin);
 // 2.3. staff
-server.use('/api/v1/staff', isAuthentication, isAuthorization("staff"), routes.admin);
+server.use('/api/v1/staff',
+    isAuthentication,
+    isAuthorization(roles.STAFF),
+    upload.array('files'),
+    routes.staff);
+
+// server.post('/api/v1/upload',
+//     isAuthentication,
+//     async (req, res) => {
+//         try {
+//             await req.files.map(async file => {
+//                 Attachment.create({
+//                     fileName: file.filename,
+//                     filePath: file.path,
+//                     downloadable: true,
+//                     post: '62041c1dd2bfa7eb6c4f3879'
+//                 })
+//             })
+//         } catch (error) {
+//             res.status(500).json({
+//                 files: req.files
+//             })
+//         }
+//     })
 // 2.4. customer
-server.use('/api/v1/customer', isAuthentication, isAuthorization("admin", "staff", "customer"), routes.users);
+// server.use('/api/v1/customer', isAuthentication, isAuthorization(roles.ADMIN), routes.users);
 // 2.5. checkout
-server.use('/api/v1/checkout', isAuthentication, routes.payment);
-
-server.get('/send', async (req, res) => {
-    try {
-        const email = new EmailService('pornhudpremium@gmail.com', process.env.NODEMAILER_SENDER);
-        await email.sendEmail();
-        res.status(200).send('send successully');
-    } catch (error) {
-        res.send(error.message)
-    }
-    // try {
-    //     let transporter = nodemailer.createTransport({
-    //         service: 'gmail',// true for 465, false for other ports
-    //         port: 587,
-    //         auth: {
-    //             user: process.env.GMAIL_USER, // generated ethereal user
-    //             pass: process.env.GMAIL_PASS, // generated ethereal password
-    //         },
-    //         secure: true,
-    //     });
-    //     transporter.sendMail({
-    //         from: process.env.NODEMAILER_SENDER, // sender address
-    //         to: 'pornhudpremium@gmail.com', // list of receivers
-    //         subject: "You have signed up successfully", // Subject line
-    //         text: `Dear customer`, // plain text body
-    //         html: "<h2>Thank you for your joining to our service</h2>", // html body
-    //     }, (err, info) => {
-    //         if (err) {
-    //             throw new Error(err.message)
-    //         }
-    //         res.status(200).send(info.messageId);
-    //     });
-    // } catch (error) {
-    //     res.send(error.message)
-    // }
-});
-
-server.all('*', function (req, res, next) {
-    var origin = cors.origin.indexOf(req.header('origin').toLowerCase()) > -1 ? req.headers.origin : cors.default;
-    res.header("Access-Control-Allow-Origin", origin);
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-    next();
-});
-
+// server.use('/api/v1/checkout', isAuthentication, routes.payment);
+// 2.6. send email
+// server.get('/send_email', auth, async (req, res) => {
+//     try {
+//         const email = new EmailService('pornhudpremium@gmail.com', process.env.NODEMAILER_SENDER);
+//         await email.sendEmail();
+//         res.status(200).send('send successfully');
+//     } catch (error) {
+//         res.send(error.message)
+//     }
+// });
 // Catch page error with server routing
 server.use((req, res) => {
     res.status(404).json({
@@ -76,10 +98,31 @@ server.use((req, res) => {
     })
 })
 
-// implementing our server
-connectToMongo(client => {
-    server.listen(process.env.PORT || 5000, () => {
-        console.log("Server is running on", process.env.PORT);
-    })
-})
 
+// implementing our server
+io.on('connection', (socket) => {
+    console.log('socket connected to the internet');
+    // 1. Send event to client
+    socket.emit('test', 'Test socket successfully');
+    // 2. Take event from client 
+    io.on('notify', () => {
+        return {
+            action: 'a'
+        }
+    })
+    socket.on('disconnect', () => {
+        console.log("socket server have been off");
+    })
+});
+
+
+connectToMongo(client => {
+    httpServer.listen(process.env.PORT || 5000, async () => {
+        console.log("Server is running on", process.env.PORT || 5000);
+    });
+});
+
+
+module.exports = {
+    upload: upload
+};

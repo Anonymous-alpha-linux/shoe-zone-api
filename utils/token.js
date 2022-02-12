@@ -7,12 +7,11 @@ class Token {
 
     createToken() {
         return jwt.sign(this.payload, process.env.JSON_SECRETE_TOKEN, {
-            expiresIn: 60 * 60 * 24,
+            expiresIn: '6h',
         });
     }
 
     async createRefreshToken() {
-
         return jwt.sign(this.payload, process.env.JSON_REFRESH_TOKEN,
             {
                 expiresIn: '2d'

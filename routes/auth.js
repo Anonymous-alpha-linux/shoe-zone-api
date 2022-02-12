@@ -13,10 +13,10 @@ router.get('/', isAuthentication, (req, res) => {
         ...req.user
     });
 
-    return res.status(200).json({
+    return res.status(401).json({
         isLoggedIn: false,
         success: false,
-        message: "Login First for authentication"
+        message: "You're not authenticated !"
     });
 });
 
@@ -28,13 +28,11 @@ router.route('/register')
             if (!email) throw new Error("Fullfill your email");
             if (!password) throw new Error("Please input your password");
 
-
             const duplicateUser = await Account.findOne({ email: email }).exec();
             const assignedRole = await Role.findOne({ roleName: role }).exec();
             // 2. Validate user is duplicate and role is existed
             if (duplicateUser) throw new Error("User has been exist");
             if (!assignedRole) throw new Error("There are no capable role to authorize");
-
 
             // 3. Create and save new Account to database
             const newAccount = await Account.create({
@@ -43,9 +41,15 @@ router.route('/register')
                 email: email,
                 profileImage: profileImage || 'https://laptrinhcuocsong.com/images/anh-vui-lap-trinh-vien-7.png',
                 role: assignedRole && assignedRole._id,
+            }, function (error) {
+                if (error) {
+                    let error = new Error('Cannot create user');
+                    error.status = 401;
+                    throw error;
+                }
             });
+
             // 4. Send email for confirmation
-            console.log('register email', email);
             const emailServ = new EmailService(email, process.env.NODEMAILER_SENDER);
             emailServ.sendEmail();
 
@@ -66,14 +70,13 @@ router.route('/register')
             })
 
         } catch (err) {
-            res.send({
+            res.status(err.status || 400).send({
                 isLoggedIn: false,
                 success: false,
                 error: err.message,
             })
         }
     });
-
 
 router.route('/login')
     .get(function (req, res) {
@@ -99,7 +102,8 @@ router.route('/login')
 
             // 2. Validate user is existed
             const user = await Account.findOne({ email: email }).exec();
-            const role = await Role.findOne({ id: user.role._id }).exec();
+
+            const role = await Role.findOne({ _id: user.role._id }).exec();
             if (!user) throw new Error("Maybe you forgot username or password");
 
             // 3. Validate the log user password is capable
@@ -110,11 +114,7 @@ router.route('/login')
                 id: user._id,
                 roleId: user.role._id
             });
-
             let accessToken = token.createToken();
-
-
-
             return res.status(200).cookie('accessToken', accessToken, {
                 httpOnly: true,
             }).json({
@@ -125,15 +125,9 @@ router.route('/login')
                 account: user.username,
                 role: role.roleName
             });
-            // Token.sendToken(200, accessToken, res).json({
-            //     isLoggedIn: true,
-            //     success: true,
-            //     message: "Login successfully",
-            //     accessToken
-            // });
 
         } catch (err) {
-            res.send({
+            res.status(401).send({
                 isLoggedIn: false,
                 success: false,
                 error: err.message,
@@ -142,7 +136,6 @@ router.route('/login')
     })
 
 router.route('/logout').get(async function (req, res, next) {
-
     res.clearCookie('accessToken', {
         httpOnly: true
     });
