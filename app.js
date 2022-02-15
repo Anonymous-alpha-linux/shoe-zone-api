@@ -61,25 +61,6 @@ server.use('/api/v1/staff',
     isAuthorization(roles.STAFF),
     upload.array('files'),
     routes.staff);
-
-// server.post('/api/v1/upload',
-//     isAuthentication,
-//     async (req, res) => {
-//         try {
-//             await req.files.map(async file => {
-//                 Attachment.create({
-//                     fileName: file.filename,
-//                     filePath: file.path,
-//                     downloadable: true,
-//                     post: '62041c1dd2bfa7eb6c4f3879'
-//                 })
-//             })
-//         } catch (error) {
-//             res.status(500).json({
-//                 files: req.files
-//             })
-//         }
-//     })
 // 2.4. customer
 // server.use('/api/v1/customer', isAuthentication, isAuthorization(roles.ADMIN), routes.users);
 // 2.5. checkout
@@ -142,6 +123,7 @@ io.on('connection', async (socket) => {
                 console.log(err.message);
             });
     });
+
     socket.on('disconnect', () => {
         console.log("socket server have been off");
     });
