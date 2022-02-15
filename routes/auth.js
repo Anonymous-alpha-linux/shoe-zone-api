@@ -139,7 +139,6 @@ router.route('/logout').get(async function (req, res, next) {
     res.clearCookie('accessToken', {
         httpOnly: true
     });
-
     res.status(200).json({
         isLoggedIn: false,
         success: true,

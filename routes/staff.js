@@ -2,9 +2,10 @@ var express = require('express');
 const { UserProfile, Account, Post, Attachment, Category } = require('../models');
 var router = express.Router();
 
+
 /* GET workspace. */
 router.route("/")
-  .get(async (req, res, next) => {
+  .get(async (req, res) => {
     const { view, page = 0 } = req.query;
     const { accountId, roleId } = req.user;
     try {
@@ -12,11 +13,11 @@ router.route("/")
         case 'workspace':
           return Account
             .findOne({ _id: accountId })
-            .populate('workspace', 'workTitle posts manager')
+            .populate('workspace', 'workTitle posts manager members')
             .then(data => {
               res.status(200).json({
                 message: 'this is workspace',
-                posts: data
+                workspace: data
               });
             })
             .catch(error => res.status(400).send('Not found your profile'));
@@ -39,7 +40,7 @@ router.route("/")
       })
     }
   })
-  .post(async (req, res, next) => {
+  .post(async (req, res) => {
     const { view } = req.query,
       { accountId, roleId } = req.user,
       files = req.files;
@@ -74,6 +75,7 @@ router.route("/")
               }), data])
             })
             .then(data => {
+              console.log(data);
               return res.status(201).json({
                 data,
                 message: 'Post successfully'
@@ -110,7 +112,7 @@ router.route("/")
     }
 
   })
-  .put(async (req, res, next) => {
+  .put(async (req, res) => {
     const { view, postid } = req.query;
     const { accountId, roleId } = req.user;
     try {
@@ -159,6 +161,11 @@ router.route("/")
     }
   })
   .delete(async (req, res) => {
+  });
+
+router.route('/post')
+  .get(async (req, res) => {
+
   })
 
 module.exports = router;

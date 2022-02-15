@@ -3,6 +3,9 @@ const routes = require('./routes');
 const { connectToMongo } = require('./config');
 const { isAuthentication, isAuthorization, EmailService } = require('./utils');
 const { roles } = require('./fixtures');
+const Token = require('./utils');
+const { UserNotify, Account } = require('./models');
+
 
 const http = require('http');
 const express = require('express');
@@ -11,14 +14,15 @@ const multer = require('multer');
 const { Server } = require('socket.io');
 const fs = require('fs');
 
+
 const server = express();
 const httpServer = http.createServer(server);
 
 const io = new Server(httpServer, {
     cors: {
         origin: ['http://localhost:3000', 'http://localhost:4000', 'https://cms-fstaff.netlify.app/'],
-    }
-});
+    },
+}), socket = null;
 const storage = multer.diskStorage({
     destination: function (req, res, cb) {
         const { accountId, account, role } = req.user,
@@ -31,8 +35,7 @@ const storage = multer.diskStorage({
         const { account, role } = req.user;
         cb(null, `[${role.toUpperCase()}]` + account + '-' + + Date.now() + '-' + file.originalname);
     }
-})
-const upload = multer({
+}), upload = multer({
     storage: storage,
     limits: {
         fileSize: 1024 * 1024 * 5
@@ -96,25 +99,53 @@ server.use((req, res) => {
     res.status(404).json({
         error: `Page not found !`
     })
-})
-
-
-// implementing our server
-io.on('connection', (socket) => {
-    console.log('socket connected to the internet');
-    // 1. Send event to client
-    socket.emit('test', 'Test socket successfully');
-    // 2. Take event from client 
-    io.on('notify', () => {
-        return {
-            action: 'a'
-        }
-    })
-    socket.on('disconnect', () => {
-        console.log("socket server have been off");
-    })
 });
 
+
+io.use((socket, next) => {
+    const accessToken = socket.handshake.auth.accessToken;
+    if (!accessToken) {
+        return next(new Error("invalid username"))
+    }
+    socket.user = Token.Token.verifyToken(accessToken);
+    next();
+})
+io.on('connection', async (socket) => {
+    console.log('connected to the internet');
+    const { id, roleId } = socket.user;
+    // 1. Send event to client
+    socket.emit('test', "Connected to socket");
+    // 2. Take event from client 
+    socket.on('post', async (msg) => {
+        return Notification.create({
+            from: id,
+            createdAt: Date.now(),
+            message: msg,
+            type: 'post'
+        }).then(data => {
+            return Account
+                .find()
+                .updateMany(account => account._id !== id, {
+                    $push: {
+                        notifications: {
+                            isRead: false,
+                            msg: data._id
+                        }
+                    }
+                }, {
+                    upsert: true, new: true, setDefaultsOnInsert: true
+                })
+        }).then(data => {
+            io.emit('notify', data);
+        })
+            .catch(err => {
+                console.log(err.message);
+            });
+    });
+    socket.on('disconnect', () => {
+        console.log("socket server have been off");
+    });
+});
 
 connectToMongo(client => {
     httpServer.listen(process.env.PORT || 5000, async () => {
@@ -124,5 +155,6 @@ connectToMongo(client => {
 
 
 module.exports = {
-    upload: upload
+    upload: upload,
+    socket: socket,
 };

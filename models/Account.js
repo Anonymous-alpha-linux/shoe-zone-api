@@ -35,8 +35,20 @@ const accountSchema = new Schema({
     workspace: {
         type: SchemaTypes.ObjectId,
         ref: 'Workspace',
-        required: false
+        required: false,
+        default: '61f7bc0f4116f253caf86586'
     },
+    notifications: [{
+        isRead: {
+            type: Boolean,
+            default: false
+        },
+        msg: {
+            type: SchemaTypes.ObjectId,
+            ref: 'Notification',
+            required: true
+        }
+    }],
     refreshToken: String,
 }, {
     timestamps: true

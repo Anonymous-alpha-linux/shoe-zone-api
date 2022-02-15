@@ -29,7 +29,6 @@ class Token {
             httpOnly: true,
         });
     }
-    static sendRefreshToken(req, res, next) { }
 }
 
 module.exports = Token;

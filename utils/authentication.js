@@ -6,7 +6,6 @@ module.exports = async function isAuthentication(req, res, next) {
 
     try {
         if (!authorization) throw new Error("Logined first!");
-
         const token = authorization.split(' ')[1];
         if (!token) throw new Error("Token is expired!");
 
@@ -30,6 +29,6 @@ module.exports = async function isAuthentication(req, res, next) {
             isLoggedIn: false,
             success: false,
             error: 'Not Auth: ' + err.message,
-        })
+        });
     }
 }

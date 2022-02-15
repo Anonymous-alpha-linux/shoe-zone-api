@@ -11,7 +11,7 @@ module.exports = (...roles) => {
                 isLoggedIn: true,
                 success: false,
                 message: e.message
-            })
+            });
         }
     }
 }

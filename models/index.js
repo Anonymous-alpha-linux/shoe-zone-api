@@ -5,5 +5,7 @@ module.exports = {
     Workspace: require('./Workspace'),
     Post: require('./Post'),
     Attachment: require('./Attachment'),
-    Category: require('./Category')
+    Category: require('./Category'),
+    Notification: require('./Notification'),
+    UserNotify: require('./UserNoti')
 }
