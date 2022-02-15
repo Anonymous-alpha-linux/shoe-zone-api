@@ -20,7 +20,7 @@ const httpServer = http.createServer(server);
 
 const io = new Server(httpServer, {
     cors: {
-        origin: ['http://localhost:3000', 'http://localhost:4000', 'https://cms-fstaff.netlify.app/'],
+        origin: '*',
     },
 }), socket = null;
 const storage = multer.diskStorage({
