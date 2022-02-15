@@ -45,8 +45,14 @@ const storage = multer.diskStorage({
 // 1. Using middleware
 server.use(express.json()); // supporting the json body parser
 server.use(express.urlencoded({ extended: true })); // supporting the encoded url parser 
+const corsList = [
+    'http://localhost:3000',
+    'https://shoe-shop-app.netlify.app'];
 server.use(cors({
-    origin: ['http://localhost:3000', 'https://shoe-shop-app.netlify.app'],
+    origin: (origin, cb) => {
+        if (corsList.indexOf(origin) !== -1) cb(null, true);
+        else cb(new Error('Not allowed by CORS'))
+    },
     optionsSuccessStatus: 200
 }))
 
