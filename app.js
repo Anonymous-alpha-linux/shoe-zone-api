@@ -22,7 +22,7 @@ const io = new Server(httpServer, {
     cors: {
         origin: [
             'http://localhost:3000',
-            'https://cms-fstaff.netlify.app/'
+            'https://cms-fstaff.netlify.app'
         ],
     },
 }), socket = null;
@@ -50,7 +50,7 @@ server.use(express.json()); // supporting the json body parser
 server.use(express.urlencoded({ extended: true })); // supporting the encoded url parser 
 const corsList = [
     'http://localhost:3000',
-    'https://cms-fstaff.netlify.app/'];
+    'https://cms-fstaff.netlify.app'];
 server.use(cors({
     origin: (origin, cb) => {
         if (corsList.indexOf(origin) !== -1) cb(null, true);
