@@ -20,7 +20,10 @@ const httpServer = http.createServer(server);
 
 const io = new Server(httpServer, {
     cors: {
-        origin: '*',
+        origin: [
+            'http://localhost:3000',
+            'https://cms-fstaff.netlify.app/'
+        ],
     },
 }), socket = null;
 const storage = multer.diskStorage({
@@ -47,14 +50,14 @@ server.use(express.json()); // supporting the json body parser
 server.use(express.urlencoded({ extended: true })); // supporting the encoded url parser 
 const corsList = [
     'http://localhost:3000',
-    'https://shoe-shop-app.netlify.app'];
+    'https://cms-fstaff.netlify.app/'];
 server.use(cors({
     origin: (origin, cb) => {
         if (corsList.indexOf(origin) !== -1) cb(null, true);
         else cb(new Error('Not allowed by CORS'))
     },
     optionsSuccessStatus: 200
-}))
+}));
 
 // 2. Authentication
 // 2.1. authentications
