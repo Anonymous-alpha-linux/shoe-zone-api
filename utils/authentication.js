@@ -14,12 +14,14 @@ module.exports = async function isAuthentication(req, res, next) {
         const account = await Account.findById(tokenData.id);
         const role = await Role.findById(tokenData.roleId);
 
+
         req.user = {
+            workspace: account.workspace,
             account: account.username,
             role: role.roleName,
             accessToken: token,
             accountId: account._id,
-            roleId: role._id
+            roleId: role._id,
         }
 
         next();

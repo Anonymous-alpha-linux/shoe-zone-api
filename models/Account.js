@@ -54,5 +54,5 @@ const accountSchema = new Schema({
     timestamps: true
 });
 
-module.exports = model('Account', accountSchema);;
+module.exports = accountSchema;
 

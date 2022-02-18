@@ -3,8 +3,12 @@ const commentSchema = new mongoose.Schema({
     body: {
         type: String,
         required: true,
-        validate: {
-            
-        }
-    }
+    },
+    account: {
+        type: mongoose.SchemaTypes.ObjectId,
+        ref: 'Account',
+        required: true
+    },
+    like: Number,
+    dislike: Number
 })

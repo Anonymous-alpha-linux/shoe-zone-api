@@ -13,6 +13,7 @@ const cors = require('cors');
 const multer = require('multer');
 const { Server } = require('socket.io');
 const fs = require('fs');
+const path = require('path');
 
 
 const server = express();
@@ -23,7 +24,7 @@ const io = new Server(httpServer, {
         origin: [
             'http://localhost:3000',
             'https://cms-fstaff.netlify.app'
-        ],
+        ]
     },
 }), socket = null;
 const storage = multer.diskStorage({
@@ -48,17 +49,24 @@ const storage = multer.diskStorage({
 // 1. Using middleware
 server.use(express.json()); // supporting the json body parser
 server.use(express.urlencoded({ extended: true })); // supporting the encoded url parser 
+server.use('/public', express.static(path.join(__dirname, 'public')))
 const corsList = [
     'http://localhost:3000',
-    'https://cms-fstaff.netlify.app'];
+    'https://cms-fstaff.netlify.app',
+];
+
 server.use(cors({
-    origin: (origin, cb) => {
+    origin: process.env.NODE_ENV === 'development' ? '*' : (origin, cb) => {
         if (corsList.indexOf(origin) !== -1) cb(null, true);
         else cb(new Error('Not allowed by CORS'))
     },
     optionsSuccessStatus: 200
 }));
-
+// Function to serve all static files
+// inside public directory.
+// server.use(express.static('public'));
+// server.use('/documents', express.static('documents'));
+// server.use('/avatar', express.static('avatar'));
 // 2. Authentication
 // 2.1. authentications
 server.use('/api/v1/auth', routes.auth);
@@ -71,10 +79,12 @@ server.use('/api/v1/staff',
     upload.array('files'),
     routes.staff);
 // 2.4. customer
-// server.use('/api/v1/customer', isAuthentication, isAuthorization(roles.ADMIN), routes.users);
-// 2.5. checkout
-// server.use('/api/v1/checkout', isAuthentication, routes.payment);
-// 2.6. send email
+server.use('/api/v1/customer',
+    isAuthentication,
+    isAuthorization(roles.ADMIN),
+    upload.array('files'),
+    routes.admin);
+// 2.5. send email
 // server.get('/send_email', auth, async (req, res) => {
 //     try {
 //         const email = new EmailService('pornhudpremium@gmail.com', process.env.NODEMAILER_SENDER);
@@ -104,7 +114,7 @@ io.on('connection', async (socket) => {
     console.log('connected to the internet');
     const { id, roleId } = socket.user;
     // 1. Send event to client
-    socket.emit('test', "Connected to socket");
+    socket.emit('join', `connected to socket`);
     // 2. Take event from client 
     socket.on('post', async (msg) => {
         return Notification.create({

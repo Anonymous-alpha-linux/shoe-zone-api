@@ -1,11 +1,12 @@
+const { model } = require('mongoose');
 module.exports = {
-    Account: require('./Account'),
-    UserProfile: require('./User'),
-    Role: require('./Role'),
-    Workspace: require('./Workspace'),
-    Post: require('./Post'),
-    Attachment: require('./Attachment'),
-    Category: require('./Category'),
-    Notification: require('./Notification'),
+    Account: model('Account', require('./Account')),
+    UserProfile: model('UserProfile', require('./User')),
+    Role: model('Role', require('./Role')),
+    Workspace: model("Workspace", require('./Workspace')),
+    Post: model('Post', require('./Post')),
+    Attachment: model('Attachment', require('./Attachment')),
+    Category: model("Category", require('./Category')),
+    Notification: model("Notification", require('./Notification')),
     UserNotify: require('./UserNoti')
 }

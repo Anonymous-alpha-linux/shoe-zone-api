@@ -20,12 +20,7 @@ const attachmentSchema = new mongoose.Schema({
     downloadable: {
         type: Boolean,
         default: false
-    },
-    post: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Post',
-        required: true
     }
 })
 
-module.exports = mongoose.model('Attachment', attachmentSchema);
+module.exports = attachmentSchema;

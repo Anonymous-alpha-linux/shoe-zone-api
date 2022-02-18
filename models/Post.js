@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { } = require('.');
 
 const postSchema = new mongoose.Schema({
     title: {
@@ -8,7 +9,7 @@ const postSchema = new mongoose.Schema({
     content: {
         type: String,
         required: true
-    },  
+    },
     category: [{
         type: mongoose.SchemaTypes.ObjectId,
         ref: 'Category'
@@ -17,10 +18,16 @@ const postSchema = new mongoose.Schema({
         type: mongoose.SchemaTypes.ObjectId,
         ref: 'Account'
     }],
+    like: Number,
+    dislike: Number,
+    comment: [{
+        type: mongoose.SchemaTypes.ObjectId,
+        ref: 'Comment'
+    }],
     attachment: [{
         type: mongoose.SchemaTypes.ObjectId,
         ref: 'Attachment'
     }]
 })
 
-module.exports = mongoose.model('Post', postSchema);
+module.exports = postSchema;

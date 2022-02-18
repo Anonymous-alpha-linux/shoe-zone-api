@@ -123,7 +123,8 @@ router.route('/login')
                 message: "Login successfully",
                 accessToken,
                 account: user.username,
-                role: role.roleName
+                role: role.roleName,
+                workspace: user.workspace
             });
 
         } catch (err) {

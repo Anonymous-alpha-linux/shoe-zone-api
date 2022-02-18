@@ -23,4 +23,4 @@ const workspaceSchema = new mongoose.Schema({
     }]
 });
 
-module.exports = mongoose.model("Workspace", workspaceSchema);
+module.exports = workspaceSchema;
