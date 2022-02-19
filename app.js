@@ -75,7 +75,7 @@ server.use('/api/v1/auth', routes.auth);
 // 2.3. staff
 server.use('/api/v1/staff',
     isAuthentication,
-    isAuthorization(roles.STAFF),
+    isAuthorization(roles.STAFF, roles.ADMIN),
     upload.array('files'),
     routes.staff);
 // 2.4. customer

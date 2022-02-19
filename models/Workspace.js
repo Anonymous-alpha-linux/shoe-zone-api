@@ -6,6 +6,14 @@ const workspaceSchema = new mongoose.Schema({
         required: true,
         default: 'Anonymous'
     },
+    expireTime: {
+        type: Date,
+        // default: new Date((new Date()).setDate(new Date(Date.now()).getDate() + 30))
+    },
+    eventTime: {
+        type: Date,
+        // default: new Date((new Date()).setDate(new Date(Date.now()).getDate() + 30))
+    },
     manager: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Account',

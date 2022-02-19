@@ -11,4 +11,6 @@ const commentSchema = new mongoose.Schema({
     },
     like: Number,
     dislike: Number
-})
+});
+
+module.exports = mongoose.model('Comment', commentSchema);

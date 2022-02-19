@@ -2,10 +2,6 @@ const mongoose = require('mongoose');
 const { } = require('.');
 
 const postSchema = new mongoose.Schema({
-    title: {
-        type: String,
-        required: true
-    },
     content: {
         type: String,
         required: true
@@ -14,12 +10,24 @@ const postSchema = new mongoose.Schema({
         type: mongoose.SchemaTypes.ObjectId,
         ref: 'Category'
     }],
-    account: [{
+    postAuthor: {
+        type: mongoose.SchemaTypes.ObjectId,
+        ref: 'Account'
+    },
+    postOwners: [{
         type: mongoose.SchemaTypes.ObjectId,
         ref: 'Account'
     }],
     like: Number,
     dislike: Number,
+    createdAt: {
+        type: Date,
+        default: Date.now()
+    },
+    hideAuthor: {
+        type: Boolean,
+        default: false
+    },
     comment: [{
         type: mongoose.SchemaTypes.ObjectId,
         ref: 'Comment'
