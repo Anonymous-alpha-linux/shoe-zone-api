@@ -14,6 +14,7 @@ const notificationSchema = new mongoose.Schema({
     message: {
         type: String
     },
+    url: String,
     type: String,
 })
 

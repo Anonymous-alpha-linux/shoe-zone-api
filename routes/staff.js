@@ -7,13 +7,14 @@ var router = express.Router();
 /* GET workspace. */
 router.route("/")
   .get(async (req, res) => {
-    const { view, page = 0, } = req.query;
+    const { view, page = 0, count = 2, id = 0 } = req.query;
     const { accountId, roleId } = req.user;
+
     try {
       switch (view) {
         case 'workspace':
           return Workspace
-            .findOne({ _id: req.user.workspace }, 'workTitle posts members manager expireTime eventTime')
+            .findOne({ _id: req.user.workspace }, 'workTitle members manager expireTime eventTime')
             .populate([
               {
                 path: 'posts',
@@ -59,12 +60,37 @@ router.route("/")
         case 'post':
           return Workspace
             .findById(req.user.workspace)
+            .select('posts')
             .populate({
-              path: 'posts'
+              path: 'posts',
+              select: 'title content category postAuthor hideAuthor postOwners like dislike attachment createdAt comment',
+              populate: [{
+                path: 'category',
+                select: 'name'
+              }, {
+                path: 'attachment',
+                select: 'filePath fileType fileSize downloadable'
+              }, {
+                path: 'postAuthor',
+                select: 'username role profileImage',
+                populate: {
+                  path: 'role',
+                  select: 'roleName'
+                },
+                module: 'Account'
+              }, {
+                path: 'postOwners',
+                select: 'username role',
+                populate: {
+                  path: 'role',
+                  select: 'roleName'
+                }
+              }]
             })
             .then(data => {
+              console.log(data);
               return res.status(200).json({
-                response: data
+                response: data.posts.slice(page * count, page * count + count)
               })
             }).catch(error => res.status(400).send(error.message));
         case 'profile':
@@ -86,9 +112,9 @@ router.route("/")
             })
             .catch(error => res.status(400).send(error.message));
         case 'category':
-          return Category.find().then(data => {
+          return Category.find().select('name').then(data => {
             res.status(200).json({
-              category: data
+              response: data
             });
           }).catch(error => res.status(400).send(error.message));
         case 'account':
@@ -152,12 +178,11 @@ router.route("/")
     const { view } = req.query,
       { accountId, roleId } = req.user,
       files = req.files;
-
     try {
       switch (view) {
         // case 'workspace':
         //   return Account
-        //     .find({})
+        //     .findOne({_id: req.user.id})
         //     .then(data => {
         //       return Workspace.create({
         //         _id: '61f7bc0f4116f253caf86586',
@@ -167,64 +192,59 @@ router.route("/")
         //       }).then(data => res.status(200).json({
         //         message: 'created workspace successsfully'
         //       })).catch(error => res.status(400).send(error.message));
-        //     })
+        //     });
 
         case 'post':
           const { content, categories, private } = req.body;
-          console.log(req.body);
           if (files.length) return Promise.all([...req.files.map(file => Attachment.create({
             fileName: file.filename,
             filePath: file.path,
             fileType: file.mimetype,
             fileSize: file.size,
             downloadable: true
-          }))])
-            .then(files => Promise.all([Post.create({
-              content,
-              like: 0,
-              dislike: 0,
-              private: private,
-              postAuthor: accountId,
-              category: categories,
-              attachment: files.map(file => file._id),
-              createdAt: Date.now(),
-              hideAuthor: private
-            }), files]))
-            .then(data => {
-              const postID = data[0]._id;
-              return Workspace.update({ _id: req.user.workspace }, {
-                $push: {
-                  posts: postID
+          }))]).then(files => Promise.all([Post.create({
+            content,
+            like: 0,
+            dislike: 0,
+            postAuthor: accountId,
+            category: categories,
+            attachment: files.map(file => file._id),
+            createdAt: Date.now(),
+            hideAuthor: private
+          }), files])).then(data => {
+            const postID = data[0]._id;
+            return Promise.all([Workspace.findByIdAndUpdate({ _id: req.user.workspace }, {
+              $push: {
+                posts: {
+                  $each: [postID],
+                  $position: 0
                 }
-              })
+              }
+            }), postID]);
+          }).then(data => {
+            console.log(data);
+            return res.status(201).json({
+              message: "Posted successfully!",
+              postID: data[1]
             })
-            .then(data => {
-              return res.status(201).json({
-                message: "Posted successfully!"
-              })
-            })
-            .catch(error => res.status(400).send(error.message));
+          }).catch(error => res.status(400).send(error.message));
 
           return Post.create({
-            title,
             content,
             like: 0,
             dislike: 0,
             account: accountId,
             category: category
-          })
-            .then(data => {
-              const postID = data[0]._id;
-              return Workspace.update({ _id: req.user.workspace }, {
-                $push: {
-                  posts: postID
-                }
-              })
+          }).then(data => {
+            const postID = data[0]._id;
+            return Workspace.update({ _id: req.user.workspace }, {
+              $push: {
+                posts: postID
+              }
             })
-            .then(data => res.status(200).json({
-              message: "Posted successfully!"
-            }))
-            .catch(error => res.status(400).send(error.message));
+          }).then(data => res.status(200).json({
+            message: "Posted successfully!"
+          })).catch(error => res.status(400).send(error.message));
         case 'chat':
           res.send('created chat');
           break;
@@ -240,12 +260,11 @@ router.route("/")
             })
           }).catch(error => res.status(404).json({
             error: error.message
-          }))
+          }));
         default:
           res.json({
             files: req.files
-          })
-          break;
+          });
       }
     }
     catch (error) {
@@ -286,10 +305,31 @@ router.route("/")
             .catch(error => res.status(404).json({
               error: error.message
             }))
-        // case 'post':
-        //   const { title, content, attachment } = req.body;
-        // return Post.findByIdAndUpdate(postid, {
-        // }])
+        case 'post':
+          const { content, categories, private } = req.body;
+          console.log(categories, private);
+          return Promise.all([...req.files.map(file => Attachment.create({
+            fileName: file.filename,
+            filePath: file.path,
+            fileType: file.mimetype,
+            fileSize: file.size,
+            downloadable: true
+          }))]).then(files => Promise.all([Post.findByIdAndUpdate(postid, {
+            content,
+            category: categories,
+            hideAuthor: private,
+            attachment: files.map(file => file._id),
+            $push: {
+              updateAt: Date.now()
+            }
+          }), files])).then(data =>
+            res.status(200).json({
+              message: 'Update post successfully'
+            })).catch(error => res.status(400).send(error.message));
+        case 'like':
+          return
+        case 'dislike':
+          return
         case 'timespan':
           const expireTime = new Date().setDate(new Date(Date.now()).getDate() + 30);
 
@@ -306,7 +346,6 @@ router.route("/")
               message: 'Set the timespan successfully'
             }))
             .catch(error => res.status(400).send(error.message));
-
         case 'eventtime':
           const eventTime = new Date().setDate(new Date(Date.now()).getDate() + 37);
 
@@ -336,6 +375,26 @@ router.route("/")
     }
   })
   .delete(async (req, res) => {
+    const { view, postid } = req.query;
+    const { accountId, roleId } = req.user;
+    try {
+      switch (view) {
+        case 'post':
+          return Post.findByIdAndRemove(postid, {
+
+          })
+            .then()
+            .then(data => res.status(204).json({
+              message: 'Deleted post successfully'
+            })).catch(error => res.status(400).send(error.message))
+        default:
+          res.status(404).json({
+            error: 'Not found query'
+          })
+      }
+    } catch (error) {
+
+    }
   });
 
 module.exports = router;

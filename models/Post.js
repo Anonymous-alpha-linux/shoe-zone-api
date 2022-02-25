@@ -20,10 +20,21 @@ const postSchema = new mongoose.Schema({
     }],
     like: Number,
     dislike: Number,
+    likedAccounts: [{
+        type: mongoose.SchemaTypes.ObjectId,
+        ref: 'Account'
+    }],
+    dislikedAccounts: [{
+        type: mongoose.SchemaTypes.ObjectId,
+        ref: 'Account'
+    }],
     createdAt: {
+        type: Date
+    },
+    updateAt: [{
         type: Date,
         default: Date.now()
-    },
+    }],
     hideAuthor: {
         type: Boolean,
         default: false

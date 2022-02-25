@@ -43,7 +43,7 @@ const accountSchema = new Schema({
             type: Boolean,
             default: false
         },
-        msg: {
+        notification: {
             type: SchemaTypes.ObjectId,
             ref: 'Notification',
             required: true
