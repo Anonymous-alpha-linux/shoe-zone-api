@@ -1,46 +1,52 @@
 var express = require('express');
-const mongoose = require('mongoose');
-const { UserProfile, Account, Post, Attachment, Category, Workspace } = require('../models');
+const { UserProfile, Account, Post, Attachment, Category, Workspace, Comment } = require('../models');
 var router = express.Router();
+const { cloudinary } = require('../utils');
 
+let filter_actions = {
+  DEFAULT: 0,
+  MOST_LIKED: 1,
+  MY_POST: 2,
+  MY_BEST_POST: 3
+}
 
 /* GET workspace. */
 router.route("/")
   .get(async (req, res) => {
-    const { view, page = 0, count = 2, id = 0 } = req.query;
+    const { view, page = 0, filter = filter_actions.DEFAULT,
+      count = 2, id = 0, postid } = req.query;
     const { accountId, roleId } = req.user;
-
     try {
       switch (view) {
         case 'workspace':
           return Workspace
             .findOne({ _id: req.user.workspace }, 'workTitle members manager expireTime eventTime')
             .populate([
-              {
-                path: 'posts',
-                select: 'title content category postAuthor postOwners like dislike attachment createdAt comment',
-                populate: [{
-                  path: 'category',
-                  select: 'name'
-                }, {
-                  path: 'attachment',
-                  select: 'filePath fileType fileSize downloadable'
-                }, {
-                  path: 'postAuthor',
-                  select: 'username role profileImage',
-                  populate: {
-                    path: 'role',
-                    select: 'roleName'
-                  }
-                }, {
-                  path: 'postOwners',
-                  select: 'username role',
-                  populate: {
-                    path: 'role',
-                    select: 'roleName'
-                  }
-                }]
-              },
+              // {
+              //   path: 'posts',
+              //   select: 'title content category postAuthor postOwners like dislike attachment createdAt comment',
+              //   populate: [{
+              //     path: 'category',
+              //     select: 'name'
+              //   }, {
+              //     path: 'attachment',
+              //     select: 'filePath fileType fileSize downloadable'
+              //   }, {
+              //     path: 'postAuthor',
+              //     select: 'username role profileImage',
+              //     populate: {
+              //       path: 'role',
+              //       select: 'roleName'
+              //     }
+              //   }, {
+              //     path: 'postOwners',
+              //     select: 'username role',
+              //     populate: {
+              //       path: 'role',
+              //       select: 'roleName'
+              //     }
+              //   }]
+              // },
               {
                 path: 'members',
                 select: 'username email profileImage role',
@@ -58,12 +64,124 @@ router.route("/")
             })
             .catch(error => res.status(400).send(error.message));
         case 'post':
-          return Workspace
-            .findById(req.user.workspace)
+          if (filter == filter_actions.MOST_LIKED) {
+            return Workspace
+              .findById(req.user.workspace)
+              .select('posts')
+              .populate({
+                path: 'posts',
+                select: 'title content category postAuthor hideAuthor postOwners like dislike likedAccounts dislikedAccounts attachment createdAt comment',
+                options: {
+                  sort: { like: -1, createdAt: -1 }
+                },
+                populate: [{
+                  path: 'category',
+                  select: 'name',
+                }, {
+                  path: 'attachment',
+                  select: 'filePath fileType fileSize downloadable'
+                }, {
+                  path: 'postAuthor',
+                  select: 'username role profileImage',
+                  populate: {
+                    path: 'role',
+                    select: 'roleName'
+                  },
+                  module: 'Account'
+                }, {
+                  path: 'postOwners',
+                  select: 'username role',
+                  populate: {
+                    path: 'role',
+                    select: 'roleName'
+                  }
+                }, {
+                  path: 'comment',
+                }]
+              })
+              .then(data => {
+                return res.status(200).json({
+                  // response: data.posts.slice(page * count, page * count + count)
+                  response: data.posts.slice(page * count, page * count + +count)
+                })
+              }).catch(error => res.status(400).send(error.message));
+          };
+          if (filter == filter_actions.MY_POST) {
+            return Post
+              .find()
+              .where({ postAuthor: accountId })
+              .select('title content category postAuthor postOwners like dislike likedAccounts dislikedAccounts attachment createdAt comment')
+              .populate([{
+                path: 'category',
+                select: 'name'
+              }, {
+                path: 'attachment',
+                select: 'filePath fileType fileSize downloadable'
+              }, {
+                path: 'postAuthor',
+                select: 'username role profileImage',
+                populate: {
+                  path: 'role',
+                  select: 'roleName'
+                }
+              }, {
+                path: 'postOwners',
+                select: 'username role',
+                populate: {
+                  path: 'role',
+                  select: 'roleName'
+                }
+              }, {
+                path: 'comment',
+              }]).sort({
+                createdAt: -1
+              }).then(data => {
+                return res.status(200).json({
+                  response: data.slice(page * count, page * count + +count)
+                })
+              }).catch(error => res.status(400).send(error.message));
+          }
+          if (filter == filter_actions.MY_BEST_POST) {
+            return Post
+              .find()
+              .where({ postAuthor: accountId })
+              .select('title content category postAuthor postOwners like dislike likedAccounts dislikedAccounts attachment createdAt comment')
+              .populate([{
+                path: 'category',
+                select: 'name'
+              }, {
+                path: 'attachment',
+                select: 'filePath fileType fileSize downloadable'
+              }, {
+                path: 'postAuthor',
+                select: 'username role profileImage',
+                populate: {
+                  path: 'role',
+                  select: 'roleName'
+                }
+              }, {
+                path: 'postOwners',
+                select: 'username role',
+                populate: {
+                  path: 'role',
+                  select: 'roleName'
+                }
+              }, {
+                path: 'comment',
+              }]).sort({
+                like: -1,
+                createdAt: -1
+              }).then(data => {
+                return res.status(200).json({
+                  response: data.slice(page * count, page * count + +count)
+                })
+              }).catch(error => res.status(400).send(error.message));
+          }
+          return Workspace.findById(req.user.workspace)
             .select('posts')
             .populate({
               path: 'posts',
-              select: 'title content category postAuthor hideAuthor postOwners like dislike attachment createdAt comment',
+              select: 'title content category postAuthor hideAuthor postOwners like dislike likedAccounts dislikedAccounts attachment createdAt comment',
               populate: [{
                 path: 'category',
                 select: 'name'
@@ -85,17 +203,55 @@ router.route("/")
                   path: 'role',
                   select: 'roleName'
                 }
+              }, {
+                path: 'comment',
+                select: 'body account post hideAuthor createdAt like dislike likedAccounts dislikedAccounts',
+                populate: [{
+                  path: 'account likedAccounts dislikedAccounts',
+                }]
               }]
             })
             .then(data => {
-              console.log(data);
               return res.status(200).json({
-                response: data.posts.slice(page * count, page * count + count)
+                response: data.posts.slice(page * count, page * count + +count)
               })
-            }).catch(error => res.status(400).send(error.message));
+            })
+            .catch(error => res.status(400).send(error.message));
+        case 'singlepost':
+          return Post.findById(postid,
+            'title content category postAuthor hideAuthor postOwners likedAccounts dislikedAccounts like dislike attachment createdAt comment', {
+            populate: [{
+              path: 'category',
+              select: 'name'
+            }, {
+              path: 'attachment',
+              select: 'filePath fileType fileSize downloadable'
+            }, {
+              path: 'postAuthor',
+              select: 'username role profileImage',
+              populate: {
+                path: 'role',
+                select: 'roleName'
+              },
+              module: 'Account'
+            }, {
+              path: 'postOwners',
+              select: 'username role',
+              populate: {
+                path: 'role',
+                select: 'roleName'
+              }
+            }, {
+              path: 'comment',
+              select: 'body account post createdAt like dislike likedAccounts dislikedAccounts',
+              populate: [{
+                path: 'account likedAccounts dislikedAccounts',
+              }]
+            }]
+          }).then(data => res.status(200).json({ response: data })).catch(error => res.status(400).send(error.message));
         case 'profile':
           return UserProfile
-            .findOne({ account: accountId }, 'account address age firstName lastName phone', {
+            .findOne({ account: accountId }, 'account profileImage address age firstName lastName phone', {
               populate: {
                 path: 'account',
                 select: 'role',
@@ -163,6 +319,18 @@ router.route("/")
               });
             })
             .catch(error => res.status(400).send(error.message));
+        case 'comment':
+          return Comment.findOne({ post: postid }, '', {
+            populate: [{
+              path: 'account'
+            }, {
+              path: 'likedAccounts'
+            }, {
+              path: 'dislikedAccounts'
+            }]
+          }).then(data => res.status(200).json({
+            response: data
+          })).catch(error => res.status(400).send(error.message));
         default:
           return res.status(404).send('Not found query');
       }
@@ -175,9 +343,10 @@ router.route("/")
   })
   // [POST]
   .post(async (req, res) => {
-    const { view } = req.query,
+    const { view, postid } = req.query,
       { accountId, roleId } = req.user,
       files = req.files;
+    console.log(files);
     try {
       switch (view) {
         // case 'workspace':
@@ -196,6 +365,7 @@ router.route("/")
 
         case 'post':
           const { content, categories, private } = req.body;
+          // cloudinary.uploader.upload()
           if (files.length) return Promise.all([...req.files.map(file => Attachment.create({
             fileName: file.filename,
             filePath: file.path,
@@ -222,7 +392,6 @@ router.route("/")
               }
             }), postID]);
           }).then(data => {
-            console.log(data);
             return res.status(201).json({
               message: "Posted successfully!",
               postID: data[1]
@@ -239,7 +408,10 @@ router.route("/")
             const postID = data[0]._id;
             return Workspace.update({ _id: req.user.workspace }, {
               $push: {
-                posts: postID
+                posts: {
+                  $each: [postID],
+                  $position: 0
+                }
               }
             })
           }).then(data => res.status(200).json({
@@ -249,7 +421,29 @@ router.route("/")
           res.send('created chat');
           break;
         case 'comment':
-          res.send('created comment');
+          const { content: body, private: hideCommentAuthor } = req.body;
+          return Comment.create({
+            body: body,
+            hideAuthor: hideCommentAuthor,
+            account: accountId,
+            post: postid,
+            like: 0,
+            dislike: 0
+          }).then(data => {
+            return Promise.all([Post.findOneAndUpdate({
+              _id: postid,
+            }, {
+              $push: {
+                comment: {
+                  $each: [data._id],
+                  $position: 0
+                }
+              }
+            }), data]);
+          }).then(success => res.status(200).json({
+            response: success[1],
+            message: 'Comment successfully',
+          })).catch(error => res.status(400).send(error.message));
         case 'category':
           const { name } = req.body;
           return Category.create({
@@ -275,7 +469,7 @@ router.route("/")
 
   })
   .put(async (req, res) => {
-    const { view, postid } = req.query;
+    const { view, postid, commentid, interact } = req.query;
     const { accountId, roleId } = req.user;
     try {
       switch (view) {
@@ -304,10 +498,46 @@ router.route("/")
             })
             .catch(error => res.status(404).json({
               error: error.message
-            }))
+            }));
         case 'post':
-          const { content, categories, private } = req.body;
-          console.log(categories, private);
+          const { content, categories, private, isLiked, isDisliked } = req.body;
+          if (interact == 'rate') {
+            console.log(isLiked, isDisliked);
+            if (isLiked && !isDisliked) {
+              return Post.findByIdAndUpdate(postid, {
+                $addToSet: {
+                  'likedAccounts': req.user.accountId
+                },
+                $pull: {
+                  'dislikedAccounts': req.user.accountId
+                }
+              }).then(data => res.status(201).json({
+                message: 'Liked'
+              })).catch(error => res.status(400).send('Cannot liked now'));
+            }
+            if (!isLiked && isDisliked) {
+              return Post.findByIdAndUpdate(postid, {
+                $addToSet: {
+                  'dislikedAccounts': req.user.accountId
+                },
+                $pull: {
+                  'likedAccounts': req.user.accountId
+                }
+              }).then(data => res.status(201).json({
+                message: 'Disliked'
+              })).catch(error => res.status(400).send('Cannot liked now'));
+            }
+            if (!isLiked && !isDisliked) {
+              return Post.findByIdAndUpdate(postid, {
+                $pull: {
+                  'likedAccounts': req.user.accountId,
+                  'dislikedAccounts': req.user.accountId
+                }
+              }).then(data => res.status(201).json({
+                message: 'No Contact'
+              })).catch(error => res.status(400).send('Cannot liked now'));
+            }
+          }
           return Promise.all([...req.files.map(file => Attachment.create({
             fileName: file.filename,
             filePath: file.path,
@@ -326,10 +556,58 @@ router.route("/")
             res.status(200).json({
               message: 'Update post successfully'
             })).catch(error => res.status(400).send(error.message));
-        case 'like':
-          return
-        case 'dislike':
-          return
+        case 'comment':
+          const { content: body, isLiked: likedComment, isDisliked: dislikedComment } = req.body;
+          if (interact == 'rate') {
+            if (likedComment && !dislikedComment) {
+              return Comment.findByIdAndUpdate(commentid, {
+                $addToSet: {
+                  'likedAccounts': req.user.accountId
+                },
+                $pull: {
+                  'dislikedAccounts': req.user.accountId
+                }
+              }).then(data => res.status(201).json({
+                message: 'Liked Comment'
+              })).catch(error => res.status(400).send('Cannot liked now'));
+            }
+            if (!likedComment && dislikedComment) {
+              return Comment.findByIdAndUpdate(commentid, {
+                $addToSet: {
+                  'dislikedAccounts': req.user.accountId
+                },
+                $pull: {
+                  'likedAccounts': req.user.accountId
+                }
+              }).then(data => res.status(201).json({
+                message: 'Disliked Comment'
+              })).catch(error => res.status(400).send('Cannot liked now'));
+            }
+            if (!likedComment && !dislikedComment) {
+              return Comment.findByIdAndUpdate(commentid, {
+                $pull: {
+                  'likedAccounts': req.user.accountId,
+                  'dislikedAccounts': req.user.accountId
+                }
+              }).then(data => res.status(201).json({
+                message: 'No contact Comment'
+              })).catch(error => res.status(400).send('Cannot liked now'));
+            }
+          }
+          return Comment.create({
+            body: body,
+            account: accountId,
+            post: postid,
+            like: 0,
+            dislike: 0
+          }).then(data => Post.findOneAndUpdate({
+            _id: postid,
+          }, {
+            $push: {
+              comment: data._id
+            }
+          })).then(success => res.status(200).json({ message: 'Comment successfully' }))
+            .catch(error => res.status(400).send(error.message));
         case 'timespan':
           const expireTime = new Date().setDate(new Date(Date.now()).getDate() + 30);
 
@@ -365,7 +643,7 @@ router.route("/")
         default:
           res.status(404).json({
             error: 'Not found query'
-          })
+          });
       }
     }
     catch (error) {

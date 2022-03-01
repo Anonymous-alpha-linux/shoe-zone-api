@@ -16,7 +16,9 @@ module.exports = async function isAuthentication(req, res, next) {
 
 
         req.user = {
+            email: account.email,
             workspace: account.workspace,
+            profileImage: account.profileImage,
             account: account.username,
             role: role.roleName,
             accessToken: token,

@@ -8,6 +8,6 @@ module.exports = {
     Attachment: model('Attachment', require('./Attachment')),
     Category: model("Category", require('./Category')),
     Notification: model("Notification", require('./Notification')),
-    UserNotify: require('./UserNoti'),
-    Comment: require('./Comment')
+    Comment: model('Comment', require('./Comment'))
+    // UserNotify:model require('./UserNoti'),
 }

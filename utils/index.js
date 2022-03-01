@@ -6,4 +6,6 @@ module.exports = {
     isAuthentication: require('./authentication'),
     isAuthorization: require('./authorization'),
     wrapHttpToSocket: require('./wrapMiddleware'),
+    cloudinary: require('./cloudinary'),
+    multer: require('./multer')
 }

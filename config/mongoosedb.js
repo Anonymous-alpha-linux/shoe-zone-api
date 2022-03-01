@@ -11,7 +11,7 @@ function connectToMongoDB(callback) {
             useUnifiedTopology: true
         })
         .then(client => {
-            console.log('Connected to MongoDb server', client.connection.host);
+            console.log('Connected to MongoDb server', client.connection.name);
             if (callback instanceof Function) callback(client)
         })
         .catch(err => {

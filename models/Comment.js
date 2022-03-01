@@ -9,8 +9,27 @@ const commentSchema = new mongoose.Schema({
         ref: 'Account',
         required: true
     },
+    post: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'Post',
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now()
+    },
+    hideAuthor: {
+        type: Boolean
+    },
     like: Number,
-    dislike: Number
+    dislike: Number,
+    likedAccounts: [{
+        type: mongoose.SchemaTypes.ObjectId,
+        ref: 'Account'
+    }],
+    dislikedAccounts: [{
+        type: mongoose.SchemaTypes.ObjectId,
+        ref: 'Account'
+    }]
 });
 
-module.exports = mongoose.model('Comment', commentSchema);
+module.exports = commentSchema;
