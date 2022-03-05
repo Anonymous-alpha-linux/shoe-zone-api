@@ -1,24 +1,85 @@
 const bcryptjs = require('bcryptjs');
 var express = require('express');
-const { Account, Role } = require('../models');
+const { Account, Role, UserProfile } = require('../models');
 const { EmailService, isAuthentication, isAuthorization, Token } = require('../utils');
 // const { emailService } = require('../utils');
 var router = express.Router();
 /* GET home page. */
-router.get('/', isAuthentication, (req, res) => {
+router
+    .get('/', isAuthentication, (req, res) => {
+        const { view } = req.query;
+        const { accountId } = req.user;
+        try {
+            switch (view) {
+                case 'profile':
+                    return UserProfile
+                        .findOne({ account: accountId }, 'account profileImage address introduction gender age firstName lastName phone', {
+                            populate: {
+                                path: 'account',
+                                select: 'role',
+                                populate: {
+                                    path: 'role',
+                                    select: 'roleName'
+                                }
+                            }
+                        }).then(data => {
+                            res.status(200).json({
+                                response: data
+                            })
+                        }).catch(error => res.status(400).send(error.message));
+                default:
+                    return res.status(200).json({
+                        isLoggedIn: true,
+                        success: true,
+                        ...req.user
+                    });
+            }
+        } catch (error) {
+            return res.status(401).json({
+                isLoggedIn: false,
+                success: false,
+                error: "You're not authenticated !"
+            });
+        }
 
-    if (req.user) return res.status(200).json({
-        isLoggedIn: true,
-        success: true,
-        ...req.user
-    });
+    }).put('/', isAuthentication, (req, res) => {
+        const { accountId } = req.user;
+        const { view } = req.query;
+        switch (view) {
+            case 'profile':
+                const { firstName, lastName, address, phone, introduction, gender, birth } = req.body;
+                const dateOfBirth = new Date(birth);
+                const doc = {
+                    firstName,
+                    lastName,
+                    phone,
+                    address,
+                    introduction,
+                    gender,
+                    age: (new Date(Date.now())).getFullYear() - dateOfBirth.getFullYear(),
+                }
+                // 1. Check if account have profile
+                return UserProfile
+                    .findOneAndUpdate({ account: accountId }, {
+                        ...doc,
+                        $set: {
+                            account: accountId
+                        }
+                    }, { upsert: true, new: true, setDefaultsOnInsert: true })
+                    .then(data => {
+                        res.status(202).json({
+                            data,
+                            status: 'Edit successfully'
+                        });
+                    })
+                    .catch(error => res.status(404).json({
+                        error: error.message
+                    }));
 
-    return res.status(401).json({
-        isLoggedIn: false,
-        success: false,
-        message: "You're not authenticated !"
-    });
-});
+            default:
+                break;
+        }
+    })
 
 router.route('/register')
     .post(async function (req, res) {
@@ -134,17 +195,18 @@ router.route('/login')
                 error: err.message,
             })
         }
-    })
+    });
 
-router.route('/logout').get(async function (req, res, next) {
-    res.clearCookie('accessToken', {
-        httpOnly: true
-    }).status(200).json({
-        isLoggedIn: false,
-        success: true,
-        message: 'Logout',
-    })
-})
+router.route('/logout')
+    .get(async function (req, res, next) {
+        res.clearCookie('accessToken', {
+            httpOnly: true
+        }).status(200).json({
+            isLoggedIn: false,
+            success: true,
+            message: 'Logout',
+        })
+    });
 
 router.post('/forgot', async function (req, res, next) {
     const { email, newPassword } = req.body;
@@ -163,7 +225,9 @@ router.post('/forgot', async function (req, res, next) {
             error: err.message
         })
     }
-})
+});
+
+router.post('/')
 
 // router.route('/protected').get(isAuthentication, isAuthorization('admin', 'staff'), async function (req, res, next) {
 //     try {

@@ -24,6 +24,8 @@ const userSchema = new mongoose.Schema({
     address: {
         type: String
     },
+    introduction: String,
+    gender: String,
     account: {
         type: mongoose.SchemaTypes.ObjectId,
         ref: 'Account',

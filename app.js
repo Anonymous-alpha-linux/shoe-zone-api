@@ -158,7 +158,16 @@ io.on('connection', async (socket) => {
 connectToMongo(client => {
     httpServer.listen(process.env.PORT || 5000, async () => {
         console.log("Server is running on", process.env.PORT || 5000);
+        // Workspace.aggregate()
+        //     .match({
+        //         _id: '61f7bc0f4116f253caf86586'
+        //     })
+        //     .project({ posts: 1, _id: 0 })
+        //     .lookup({ from: 'posts', as: 'posts', localField: 'posts', foreignField: '_id' })
+        //     .limit(3)
+        //     .then(data => console.log(data));
     });
+
 });
 
 module.exports = {

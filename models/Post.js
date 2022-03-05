@@ -18,8 +18,6 @@ const postSchema = new mongoose.Schema({
         type: mongoose.SchemaTypes.ObjectId,
         ref: 'Account'
     }],
-    like: Number,
-    dislike: Number,
     likedAccounts: [{
         type: mongoose.SchemaTypes.ObjectId,
         ref: 'Account'
@@ -46,7 +44,11 @@ const postSchema = new mongoose.Schema({
     attachment: [{
         type: mongoose.SchemaTypes.ObjectId,
         ref: 'Attachment'
-    }]
+    }],
+    workspace: {
+        type: mongoose.SchemaTypes.ObjectId,
+        ref: 'Workspace'
+    }
 })
 
 module.exports = postSchema;

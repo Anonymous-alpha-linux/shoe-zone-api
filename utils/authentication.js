@@ -7,9 +7,10 @@ module.exports = async function isAuthentication(req, res, next) {
     try {
         if (!authorization) throw new Error("Logined first!");
         const token = authorization.split(' ')[1];
-        if (!token) throw new Error("Token is expired!");
+        if (!token) throw new Error("Token is incorrect!");
 
         const tokenData = Token.verifyToken(token);
+        if (!tokenData?.id) throw new Error("Token is expired!");
 
         const account = await Account.findById(tokenData.id);
         const role = await Role.findById(tokenData.roleId);

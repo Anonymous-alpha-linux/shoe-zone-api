@@ -23,11 +23,6 @@ const workspaceSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Account',
         required: false
-    }],
-    posts: [{
-        type: mongoose.SchemaTypes.ObjectId,
-        ref: 'Post',
-        required: false
     }]
 });
 
