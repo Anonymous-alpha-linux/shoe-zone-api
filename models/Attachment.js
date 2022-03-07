@@ -13,6 +13,7 @@ const attachmentSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    fileFormat: String,
     fileSize: {
         type: Number,
         required: true
