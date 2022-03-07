@@ -1,6 +1,6 @@
 let jwt = require('jsonwebtoken');
 
-class Token {
+module.exports = class Token {
     constructor(payload) {
         this.payload = payload;
     }
@@ -30,5 +30,3 @@ class Token {
         });
     }
 }
-
-module.exports = Token;

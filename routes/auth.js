@@ -1,13 +1,13 @@
 const bcryptjs = require('bcryptjs');
 var express = require('express');
-const { Account, Role, UserProfile } = require('../models');
+const { Account, Role, UserProfile, Notification } = require('../models');
 const { EmailService, isAuthentication, isAuthorization, Token } = require('../utils');
 // const { emailService } = require('../utils');
 var router = express.Router();
 /* GET home page. */
 router
     .get('/', isAuthentication, (req, res) => {
-        const { view } = req.query;
+        let { view, page, count } = req.query;
         const { accountId } = req.user;
         try {
             switch (view) {
@@ -27,6 +27,25 @@ router
                                 response: data
                             })
                         }).catch(error => res.status(400).send(error.message));
+                case 'notification':
+                    console.log('notification');
+                    page = parseInt(page);
+                    count = parseInt(count);
+                    return Notification.aggregate()
+                        .match({ from: { $ne: accountId } })
+                        .skip(page * count)
+                        .limit(count)
+                        .project({
+                            from: 1, createdAt: 1, message: 1, url: 1
+                        })
+                        .lookup({ from: 'accounts', as: 'from', localField: 'from', foreignField: '_id' })
+                        .unwind('from')
+                        .then(data => {
+                            console.log(data)
+                            return res.status(200).json({
+                                response: data
+                            });
+                        }).catch(error => res.status(400).send({ error: error.message }));
                 default:
                     return res.status(200).json({
                         isLoggedIn: true,
@@ -38,7 +57,7 @@ router
             return res.status(401).json({
                 isLoggedIn: false,
                 success: false,
-                error: "You're not authenticated !"
+                error: error.message
             });
         }
 
@@ -226,8 +245,6 @@ router.post('/forgot', async function (req, res, next) {
         })
     }
 });
-
-router.post('/')
 
 // router.route('/protected').get(isAuthentication, isAuthorization('admin', 'staff'), async function (req, res, next) {
 //     try {

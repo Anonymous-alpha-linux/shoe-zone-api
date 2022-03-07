@@ -15,7 +15,7 @@ let filter_actions = {
 router.route("/")
   .get(async (req, res) => {
     let { view, page = 0, filter = filter_actions.DEFAULT,
-      count = 2, id = 0, postid, commentid } = req.query;
+      count = 2, id = 0, postid, commentid, accountid } = req.query;
     let { accountId, roleId, workspace } = req.user;
 
     try {
@@ -431,7 +431,7 @@ router.route("/")
             }).catch(error => res.status(400).send(error.message));
         case 'profile':
           return UserProfile
-            .findOne({ account: accountId }, 'account profileImage address age firstName lastName phone', {
+            .findOne({ account: accountid }, 'account profileImage address age firstName lastName phone', {
               populate: {
                 path: 'account',
                 select: 'role',
@@ -504,7 +504,7 @@ router.route("/")
           count = parseInt(count);
 
           if (filter == filter_actions.MOST_LIKED) {
-            console.log('most liked comments');
+
             return Comment.aggregate([{
               $match: { post: mongoose.Types.ObjectId(postid) }
             }])
@@ -517,7 +517,8 @@ router.route("/")
                 dislike: { $size: '$dislikedAccounts' },
                 likedAccounts: 1,
                 dislikedAccounts: 1,
-                reply: { $size: '$replies' }
+                reply: { $size: '$replies' },
+                replies: 1,
               })
               .sort({ like: -1, createdAt: -1 })
               .skip(page * count)
@@ -560,7 +561,8 @@ router.route("/")
                 dislike: { $size: '$dislikedAccounts' },
                 likedAccounts: 1,
                 dislikedAccounts: 1,
-                reply: { $size: '$replies' }
+                reply: { $size: '$replies' },
+                replies: 1,
               })
               .sort({ createdAt: -1 })
               .skip(page * count)
@@ -603,7 +605,8 @@ router.route("/")
                 dislike: { $size: '$dislikedAccounts' },
                 likedAccounts: 1,
                 dislikedAccounts: 1,
-                reply: { $size: '$replies' }
+                reply: { $size: '$replies' },
+                replies: 1,
               })
               .sort({ like: -1, createdAt: -1 })
               .skip(page * count)
@@ -645,7 +648,8 @@ router.route("/")
               dislike: { $size: '$dislikedAccounts' },
               likedAccounts: 1,
               dislikedAccounts: 1,
-              reply: { $size: '$replies' }
+              reply: { $size: '$replies' },
+              replies: 1,
             })
             .sort({ createdAt: -1 })
             .skip(page * count)
@@ -674,7 +678,53 @@ router.route("/")
                 response: data
               });
             }).catch(error => res.status(400).send(error.message));
+        case 'reply':
+          page = parseInt(page);
+          count = parseInt(count);
+          return Comment.aggregate([{
+            $match: { _id: mongoose.Types.ObjectId(commentid) }
+          }])
+            .project({
+              body: 1,
+              account: 1,
+              createdAt: 1,
+              hideAuthor: 1,
+              like: { $size: '$likedAccounts' },
+              dislike: { $size: '$dislikedAccounts' },
+              likedAccounts: 1,
+              dislikedAccounts: 1,
+              reply: { $size: '$replies' },
+              replies: 1,
+            })
+            .sort({ createdAt: -1 })
+            .skip(page * count)
+            .limit(count)
+            .lookup({
+              from: 'accounts',
+              as: 'account',
+              localField: 'account',
+              foreignField: '_id'
+            })
+            .unwind('account')
+            .lookup({
+              from: 'accounts',
+              as: 'likedAccounts',
+              localField: 'likedAccounts',
+              foreignField: '_id'
+            })
+            .lookup({
+              from: 'accounts',
+              as: 'dislikedAccounts',
+              localField: 'dislikedAccounts',
+              foreignField: '_id'
+            })
+            .then(data => {
+              res.status(200).json({
+                response: data[0].replies
+              });
+            }).catch(error => res.status(400).send(error.message));
         case 'singlecomment':
+
           return Comment.findById(commentid)
             .select({
               account: 1,
@@ -714,7 +764,7 @@ router.route("/")
   // [POST]
   .post(async (req, res) => {
     const { view, postid } = req.query,
-      { accountId, roleId } = req.user,
+      { accountId, role, email } = req.user,
       files = req.files;
     try {
       switch (view) {
@@ -731,65 +781,113 @@ router.route("/")
         //       message: 'created workspace successsfully'
         //     })).catch(error => res.status(400).send(error.message));
         //   });
-
-
         case 'post':
           const { content, categories, private } = req.body;
-          // cloudinary.uploader.upload()
-          if (files.length) return Promise.all([...req.files.map(file => Attachment.create({
-            fileName: file.filename,
-            filePath: file.path,
-            fileType: file.mimetype,
-            fileSize: file.size,
-            downloadable: true
-          }))]).then(files => Promise.all([Post.create({
-            content,
-            like: 0,
-            dislike: 0,
-            postAuthor: accountId,
-            category: categories,
-            attachment: files.map(file => file._id),
-            createdAt: Date.now(),
-            hideAuthor: private,
-            workspace: req.user.workspace
-          }), files])).then(data => {
-            const postID = data[0]._id;
-            return Promise.all([Workspace.findByIdAndUpdate({ _id: req.user.workspace }, {
-              $push: {
-                posts: {
-                  $each: [postID],
-                  $position: 0
-                }
-              }
-            }), postID]);
-          }).then(data => {
-            return res.status(201).json({
-              message: "Posted successfully!",
-              postID: data[1]
-            })
-          }).catch(error => res.status(400).send(error.message));
 
-          return Post.create({
-            content,
-            like: 0,
-            dislike: 0,
-            account: accountId,
-            category: category
-          }).then(data => {
-            const postID = data[0]._id;
-            return Workspace.update({ _id: req.user.workspace }, {
-              $push: {
-                posts: {
-                  $each: [postID],
-                  $position: 0
-                }
-              }
+          function createFolderOnCloudinary() {
+            return new Promise((resolve, reject) => {
+              cloudinary.api.create_folder(`CMS_STAFF/[${role.toUpperCase()}]-${email}`, {
+              }, (error, result) => {
+                if (error) reject(error);
+                resolve(result);
+              })
             })
-          }).then(data => res.status(200).json({
-            message: "Posted successfully!"
-          })).catch(error => res.status(400).send(error.message));
+          }
+          function uploadFilesToCloudinaryFolder(folder) {
+            const { path, name } = folder;
+            return Promise.all(files.map(file => {
+              return new Promise((resolve, reject) => {
+                cloudinary.uploader.upload(file.path, {
+                  folder: path,
+                  filename_override: `${new Date(Date.now()).toLocaleString('en-uk', {
+                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+                  })}`,
+                  use_filename: true
+                }, function (error, result) {
+                  if (error) {
+                    reject(error);
+                  }
+                  resolve(result);
+                });
+              });
+            }))
+          }
+          function createAttachmentFromCloudinary(file) {
+            const {
+              public_id,
+              signature,
+              format,
+              resource_type,
+              created_at,
+              bytes,
+              url,
+              secure_url,
+              api_key
+            } = file;
+            return Attachment.create({
+              fileName: public_id,
+              filePath: secure_url || url,
+              fileType: `${resource_type}/${format}`,
+              fileFormat: format,
+              fileSize: bytes,
+              createdAt: created_at,
+              online_url: secure_url || url,
+              api_key: api_key,
+              signature,
+              downloadable: true
+            });
+          }
+          function createAttachment(file) {
+            return Attachment.create({
+              // fileName: file.filename,
+              // filePath: file.path,
+              // fileType: file.mimetype,
+              // fileSize: file.size,
+              downloadable: true
+            })
+          }
+          function createNewPost(files) {
+            return Post.create({
+              content,
+              postAuthor: accountId,
+              category: categories,
+              attachment: files.map(file => file._id),
+              createdAt: Date.now(),
+              hideAuthor: private,
+              workspace: req.user.workspace
+            })
+          }
+
+          // 1. Create a new folder before saving file
+          return createFolderOnCloudinary()
+            // 2. Upload files to the upset folder
+            .then(folder => {
+              return uploadFilesToCloudinaryFolder(folder);
+            })
+            // 3. Create attachment
+            .then(uploadFiles => {
+              return Promise.all(uploadFiles.map(file => {
+                console.log(file);
+                return createAttachmentFromCloudinary(file);
+              }))
+            })
+            // 4. Add Attachment to post
+            .then(attachments => {
+              return createNewPost(attachments);
+            })
+            .then(data => {
+              return res.status(200).json({
+                file: data,
+                message: 'Post successfully',
+              });
+            })
+            .catch(e => {
+              return res.status(400).json({
+                error: e.message
+              });
+            });
         case 'chat':
-          res.send('created chat');
+          return res.send('created chat');
           break;
         case 'comment':
           const { content: body, private: hideCommentAuthor } = req.body;
@@ -834,7 +932,7 @@ router.route("/")
     }
     catch (error) {
       res.status(500).json({
-        error: 'Error Created In Server'
+        error: error.message
       })
     }
 
@@ -936,7 +1034,7 @@ router.route("/")
           const { content: body, isLiked: likedComment, isDisliked: dislikedComment } = req.body;
           if (interact == 'rate') {
             if (likedComment && !dislikedComment) {
-              console.log('liked');
+
               return Comment.findByIdAndUpdate(commentid, {
                 $addToSet: {
                   'likedAccounts': accountId
@@ -949,7 +1047,7 @@ router.route("/")
               })).catch(error => res.status(400).send('Cannot liked now'));
             }
             if (!likedComment && dislikedComment) {
-              console.log('disliked');
+
               return Comment.findByIdAndUpdate(commentid, {
                 $addToSet: {
                   'dislikedAccounts': req.user.accountId
@@ -973,20 +1071,22 @@ router.route("/")
             }
           }
           if (interact == 'reply') {
+
             return Comment.create({
               body: body,
               account: accountId,
               post: postid,
               like: 0,
               dislike: 0
-            }).then(data => Comment.findOneAndUpdate({
+            }).then(data => Promise.all([Comment.findOneAndUpdate({
               _id: commentid,
             }, {
               $push: {
                 replies: data._id
               }
-            })).then(success => res.status(200).json({
-              message: 'Reply successfully'
+            }), data])).then(success => res.status(200).json({
+              message: 'Reply successfully',
+              response: success[1]
             })).catch(error => res.status(400).send(error.message));
           }
           return Comment.create({
@@ -1058,6 +1158,10 @@ router.route("/")
             .then(data => res.status(204).json({
               message: 'Deleted post successfully'
             })).catch(error => res.status(400).send(error.message))
+        case 'all post':
+          return Post.remove({}).then(response => res.status(203).send('deleted all posts')).catch(e => res.status(400).send('delete failed'));
+        case 'all attachment':
+          return Attachment.remove({}).then(response => res.status(203).send('deleted all attachments')).catch(e => res.status(400).send('delete failed'));
         default:
           res.status(404).json({
             error: 'Not found query'

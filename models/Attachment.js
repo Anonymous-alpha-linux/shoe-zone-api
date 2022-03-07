@@ -17,6 +17,13 @@ const attachmentSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    createdAt: {
+        type: Date,
+        default: Date.now()
+    },
+    online_url: String,
+    api_key: String,
+    signature: String,
     downloadable: {
         type: Boolean,
         default: false

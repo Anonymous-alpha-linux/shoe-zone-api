@@ -12,7 +12,8 @@
     "multer-sftp": "^1.1.1",
     "nodemailer": "^6.7.2",
     "socket.io": "^4.4.1",
-    "ssh2-sftp-client": "^7.2.2"
+    "ssh2-sftp-client": "^7.2.2",
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
     "nodemon": "^2.0.15"
