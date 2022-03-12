@@ -6,7 +6,7 @@ const postSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    category: [{
+    categories: [{
         type: mongoose.SchemaTypes.ObjectId,
         ref: 'Category'
     }],
@@ -37,11 +37,11 @@ const postSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    comment: [{
+    comments: [{
         type: mongoose.SchemaTypes.ObjectId,
         ref: 'Comment'
     }],
-    attachment: [{
+    attachments: [{
         type: mongoose.SchemaTypes.ObjectId,
         ref: 'Attachment'
     }],

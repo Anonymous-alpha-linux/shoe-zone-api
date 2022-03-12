@@ -13,6 +13,10 @@ const commentSchema = new mongoose.Schema({
         type: mongoose.Schema.ObjectId,
         ref: 'Post',
     },
+    comment: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'Comment',
+    },
     createdAt: {
         type: Date,
         default: Date.now()
@@ -34,6 +38,10 @@ const commentSchema = new mongoose.Schema({
         type: mongoose.SchemaTypes.ObjectId,
         ref: 'Comment'
     }]
+    // replies: [{
+    //     type: mongoose.SchemaTypes.ObjectId,
+    //     ref: 'Comment'
+    // }]
 });
 
 module.exports = commentSchema;

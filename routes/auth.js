@@ -28,20 +28,17 @@ router
                             })
                         }).catch(error => res.status(400).send(error.message));
                 case 'notification':
-                    console.log('notification');
                     page = parseInt(page);
                     count = parseInt(count);
                     return Notification.aggregate()
                         .match({ from: { $ne: accountId } })
+                        .sort({ createdAt: -1 })
                         .skip(page * count)
                         .limit(count)
-                        .project({
-                            from: 1, createdAt: 1, message: 1, url: 1
-                        })
+                        .project({ from: 1, createdAt: 1, message: 1, url: 1, type: 1 })
                         .lookup({ from: 'accounts', as: 'from', localField: 'from', foreignField: '_id' })
                         .unwind('from')
                         .then(data => {
-                            console.log(data)
                             return res.status(200).json({
                                 response: data
                             });
@@ -95,6 +92,16 @@ router
                         error: error.message
                     }));
 
+            default:
+                break;
+        }
+    })
+    .delete('/', isAuthentication, (req, res) => {
+        const { accountId } = req.user;
+        const { view } = req.query;
+        switch (view) {
+            case 'all notification':
+                return Notification.remove({}).then(response => res.status(203).send('deleted all notification')).catch(e => res.status(400).send('delete failed'));
             default:
                 break;
         }
@@ -160,9 +167,7 @@ router.route('/register')
 
 router.route('/login')
     .get(function (req, res) {
-
         if (req.user) {
-
             return res.status(200).json({
                 isLoggedIn: true,
                 ...req.user,

@@ -3,17 +3,17 @@ const routes = require('./routes');
 const { connectToMongo } = require('./config');
 const { isAuthentication, isAuthorization, EmailService } = require('./utils');
 const { roles } = require('./fixtures');
-const { Token, cloudinary, multer } = require('./utils');
-const { UserNotify, Account, Workspace, Notification } = require('./models');
-
-
+const { Token, multer } = require('./utils');
+const { Account, Workspace, Notification } = require('./models');
+const { socketTargets } = require('./fixtures')
 const http = require('http');
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { Server } = require('socket.io');
-// const sftpStorage = require('multer-sftp');
 const { v4: uuidv4 } = require('uuid');
+const socketTarget = require('./fixtures/socket.target');
+// const sftpStorage = require('multer-sftp');
 
 const server = express();
 const httpServer = http.createServer(server);
@@ -95,18 +95,28 @@ io.use((socket, next) => {
     }
     socket.user = Token.verifyToken(accessToken);
     socket.userid = uuidv4();
+
     if (!socket.user) {
         next(new Error('Invalid user'));
     }
     next();
 })
-async function createSession(socket) {
-    const { id, roleId } = socket.user;
-    const account = await Account.findById(id);
-    return socket.emit('session', { userId: socket.userid, user: account })
+const sessions = [];
+async function sendSessionToClient(socket) {
+    return socket.emit('session', socket.userid);
 }
-async function sendNotification(socket) {
-    return;
+async function joinSession(socket) {
+    const { id } = socket.user;
+    const { username } = await Account.findById(id);
+    sessions[id] = socket.id;
+    console.log(username, 'has joined session');
+}
+async function leaveSession(socket) {
+    const { id } = socket.user;
+    const { username } = await Account.findById(id);
+    socket.on('disconnect', () => {
+        console.log(username, "have been off");
+    });
 }
 async function createNotification(socket) {
     const actions = {
@@ -122,78 +132,73 @@ async function createNotification(socket) {
         return action === actions.CREATE_POST && "created a new post" ||
             action === actions.LIKE_POST && "like your post" ||
             action === actions.DISLIKE_POST && "disliked your post" ||
-            action === actions.COMMENT_POST && "have a comment to your post" ||
+            action === actions.COMMENT_POST && "commented to your post" ||
             action === actions.REPLY_COMMENT && "replied your comment" ||
             action === actions.EDIT_POST && "edited their post"
     }
 
     return socket.on('notify', (data) => {
-        const { id, roleId } = socket.user;
-        return Notification.create({
-            from: id,
+        const { id: userId } = socket.user;
+        const { id, type, url, to: target } = data;
+        return Promise.all([Notification.create({
+            from: userId,
             createdAt: Date.now(),
-            message: sendMessage(data.type),
-            url: data.postURL,
-            type: data.type
+            message: sendMessage(type),
+            url: url,
+            type: type
+        }), target]).then(async data => {
+            const [createdNotify, target] = data;
+            const notify = await createdNotify.populate('from');
+            return [notify, target];
+        }).then(data => {
+            const [notify, target] = data;
+            sendNotifications(socket, target, notify);
+        }).catch(error => {
+            console.log(error.message);
         })
-            .then(data => socket.broadcast.emit('notify', data))
-            .catch(error => {
-                throw new Error(error.message);
-            })
     });
 }
-// async function sendNotifications(socket, to = [], data) {
-//     if (to === targets)
-//         return socket.emit('notify', data);
-//     else if (to === WITH_BROADCAST)
-//         return socket.broadcast.emit('notify', data);
-//     return socket.to(to).emit("notify", data);
-// }
-async function connectToSocket(socket) {
-    return;
+async function sendNotifications(socket, to = socketTargets.ALL_USERS, data) {
+    if (to == socketTargets.ALL_USERS)
+        return socket.emit('notify', data);
+    else if (to == socketTarget.WITHOUT_BROADCAST) {
+        return socket.broadcast.emit('notify', data);
+    }
+    return socket.to(sessions[to]).emit("notify", data);
 }
-async function likePost(socket) {
-    return;
+async function handleOfflineUsers(socket, onlineHandler, offlineHandler) {
+    if (socket.connected) {
+        onlineHandler();
+    }
+    else {
+        OfflineHandler();
+    }
 }
-async function dislikePost(socket) {
-    return;
+async function receiveMessage(socket) {
+    return socket.on('private message', data => {
+        const { accountId, message } = data;
+        console.log('listen message');
+        if (sessions[accountId]) {
+            socket.to(sessions[accountId]).emit('private message', message);
+        }
+    })
 }
 
 io.on('connection', async (socket) => {
-    console.log(socket.userid, 'connected to the internet');
-
+    joinSession(socket);
     // 1. Active the event when user join to staff namespace
-    socket.emit('join', `${socket.userid} connected to rooms`);
-    createSession(socket);
-    // 2.Notification
+    sendSessionToClient(socket);
     // 2.1. create notification
     createNotification(socket);
-    // socket.on("notify", data => {
-    //     console.log(data);
-    //     socket.broadcast.emit('notify', {
-    //         message: 'I have created notification, now your time to display'
-    //     });
-    // });
-    // sendNotifications(socket, socket)
     // 2.2. add notification
-
+    receiveMessage(socket);
     // 3. 
-    socket.on('disconnect', () => {
-        console.log("socket server have been off");
-    });
+    leaveSession(socket);
 });
 
 connectToMongo(client => {
     httpServer.listen(process.env.PORT || 5000, async () => {
         console.log("Server is running on", process.env.PORT || 5000);
-        // Workspace.aggregate()
-        //     .match({
-        //         _id: '61f7bc0f4116f253caf86586'
-        //     })
-        //     .project({ posts: 1, _id: 0 })
-        //     .lookup({ from: 'posts', as: 'posts', localField: 'posts', foreignField: '_id' })
-        //     .limit(3)
-        //     .then(data => console.log(data));
     });
 
 });
