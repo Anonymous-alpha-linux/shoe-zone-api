@@ -35,7 +35,12 @@ const corsList = [
     'https://cms-fstaff.netlify.app',
 ];
 server.use(cors({
-    origin: process.env.NODE_ENV === 'development' ? '*' : (origin, cb) => {
+    // origin: process.env.NODE_ENV === 'development' ? '*' : (origin, cb) => {
+    //     if (corsList.indexOf(origin) !== -1) cb(null, true);
+    //     else cb(new Error('Not allowed by CORS'))
+    // },
+    origin: (origin, cb) => {
+        console.log(origin);
         if (corsList.indexOf(origin) !== -1) cb(null, true);
         else cb(new Error('Not allowed by CORS'))
     },
