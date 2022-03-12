@@ -68,6 +68,12 @@ server.use('/api/v1/staff',
     isAuthorization(roles.STAFF, roles.QA_COORDINATOR, roles.QA_MANAGER, roles.ADMIN),
     multer.array('files'),
     routes.staff);
+// 2.5. manager
+server.use('/api/v1/manager',
+    isAuthentication,
+    isAuthorization(roles.STAFF, roles.QA_COORDINATOR, roles.QA_MANAGER, roles.ADMIN),
+    multer.array('files'),
+    routes.QA_manager);
 // 2.4. customer
 server.use('/api/v1/customer',
     isAuthentication,
