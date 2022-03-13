@@ -43,6 +43,7 @@ router
                                 response: data
                             });
                         }).catch(error => res.status(400).send({ error: error.message }));
+
                 default:
                     return res.status(200).json({
                         isLoggedIn: true,

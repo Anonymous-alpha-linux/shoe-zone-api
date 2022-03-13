@@ -31,10 +31,6 @@ const commentSchema = new mongoose.Schema({
     dislikedAccounts: [{
         type: mongoose.SchemaTypes.ObjectId,
         ref: 'Account'
-    }],
-    replies: [{
-        type: mongoose.SchemaTypes.ObjectId,
-        ref: 'Comment'
     }]
 });
 

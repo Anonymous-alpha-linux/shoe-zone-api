@@ -15,7 +15,7 @@ let filter_actions = {
 router.route("/")
   .get(async (req, res) => {
     let { view, page = 0, filter = filter_actions.DEFAULT,
-      count = 2, id = 0, postid, commentid, accountid } = req.query;
+      count = 2, id = 0, postid, commentid, accountid, workspaceid } = req.query;
     let { accountId, roleId, workspace } = req.user;
     try {
       switch (view) {
@@ -54,61 +54,30 @@ router.route("/")
             }))
             .catch(e => res.status(400).send(e.message));
         case 'workspace':
-          // return Workspace
-          //   .findOne({ _id: req.user.workspace }, 'workTitle members manager expireTime eventTime')
-          //   .populate([
-          //     // {
-          //     //   path: 'posts',
-          //     //   select: 'title content category postAuthor postOwners like dislike attachment createdAt comment',
-          //     //   populate: [{
-          //     //     path: 'category',
-          //     //     select: 'name'
-          //     //   }, {
-          //     //     path: 'attachment',
-          //     //     select: 'filePath fileType fileSize downloadable'
-          //     //   }, {
-          //     //     path: 'postAuthor',
-          //     //     select: 'username role profileImage',
-          //     //     populate: {
-          //     //       path: 'role',
-          //     //       select: 'roleName'
-          //     //     }
-          //     //   }, {
-          //     //     path: 'postOwners',
-          //     //     select: 'username role',
-          //     //     populate: {
-          //     //       path: 'role',
-          //     //       select: 'roleName'
-          //     //     }
-          //     //   }]
-          //     // },
-          //     {
-          //       path: 'members',
-          //       select: 'username email profileImage role',
-          //       populate: 'role'
-          //     },
-          //     {
-          //       path: 'manager',
-          //       select: 'username email profileImage role',
-          //       populate: 'role'
-          //     }])
-          //   .then(data => {
-          //     res.status(200).json({
-          //       workspace: data
-          //     });
-          //   })
-          //   .catch(error => res.status(400).send(error.message));
           return Workspace.aggregate()
-            .match({
-              members: { $in: [mongoose.Types.ObjectId(accountId)] }
-            })
+            .match({ members: { $in: [mongoose.Types.ObjectId(accountId)] } })
             .then(data => {
               return res.status(200).json({
                 response: data
               });
-            }).catch(error => res.status(400).json({
-              message: error.message
-            }));
+            }).catch(error => res.status(400).json({ message: error.message }));
+        case 'singleworkspace':
+          return Workspace.findById(workspaceid).then(data => res.status(200).json({ response: data })).catch(error => res.status(401).send(error.message));
+        case 'manager':
+          console.log("get manager info", accountid);
+          return Promise.all([
+            Account.findById(accountid, "", {
+              select: { profileImage: 1, username: 1, email: 1, role: 1 },
+              populate: { path: 'role', select: { _id: 0, roleName: 1 } }
+            }),
+            UserProfile.findOne({ account: accountid }, '', {
+              select: { _id: 0, address: 1, age: 7, firstName: 1, lastName: 1, phone: 1, gender: 1, introduction: 1 },
+            })
+          ])
+            .then(data => {
+              const [manager, profile] = data;
+              res.status(200).json({ response: { manager, profile } });
+            }).catch(error => res.status(402).send(error.message));
         case 'post':
           page = parseInt(page);
           count = parseInt(count);
@@ -346,10 +315,7 @@ router.route("/")
           count = parseInt(count);
 
           if (filter == filter_actions.MOST_LIKED) {
-
-            return Comment.aggregate([{
-              $match: { post: mongoose.Types.ObjectId(postid) }
-            }])
+            return Comment.aggregate([{ $match: { post: mongoose.Types.ObjectId(postid), comment: { $exists: false } } }])
               .project({
                 body: 1,
                 account: 1,
@@ -391,9 +357,7 @@ router.route("/")
               }).catch(error => res.status(400).send(error.message));
           }
           else if (filter == filter_actions.MY_POST) {
-            return Comment.aggregate([{
-              $match: { account: mongoose.Types.ObjectId(accountId) }
-            }])
+            return Comment.aggregate([{ $match: { post: mongoose.Types.ObjectId(postid), comment: { $exists: false } } }])
               .project({
                 body: 1,
                 account: 1,
@@ -435,9 +399,7 @@ router.route("/")
               }).catch(error => res.status(400).send(error.message));
           }
           else if (filter == filter_actions.MY_BEST_POST) {
-            return Comment.aggregate([{
-              $match: { account: mongoose.Types.ObjectId(accountId) }
-            }])
+            return Comment.aggregate([{ $match: { post: mongoose.Types.ObjectId(postid), comment: { $exists: false } } }])
               .project({
                 body: 1,
                 account: 1,
@@ -478,7 +440,7 @@ router.route("/")
                 });
               }).catch(error => res.status(400).send(error.message));
           }
-          return Comment.aggregate([{ $match: { post: mongoose.Types.ObjectId(postid) } }])
+          return Comment.aggregate([{ $match: { post: mongoose.Types.ObjectId(postid), comment: { $exists: false } } }])
             .project({
               body: 1,
               account: 1,
@@ -503,11 +465,12 @@ router.route("/")
                 response: data
               });
             }).catch(error => res.status(400).send(error.message));
-        case 'reply':
+        case 'comment reply':
           page = parseInt(page);
           count = parseInt(count);
+          console.log(page, count);
           return Comment.aggregate([{
-            $match: { _id: mongoose.Types.ObjectId(commentid) }
+            $match: { comment: mongoose.Types.ObjectId(commentid) }
           }])
             .project({
               body: 1,
@@ -524,30 +487,9 @@ router.route("/")
             .sort({ createdAt: -1 })
             .skip(page * count)
             .limit(count)
-            .lookup({
-              from: 'accounts',
-              as: 'account',
-              localField: 'account',
-              foreignField: '_id'
-            })
+            .lookup({ from: 'accounts', as: 'account', localField: 'account', foreignField: '_id' })
             .unwind('account')
-            .lookup({
-              from: 'accounts',
-              as: 'likedAccounts',
-              localField: 'likedAccounts',
-              foreignField: '_id'
-            })
-            .lookup({
-              from: 'accounts',
-              as: 'dislikedAccounts',
-              localField: 'dislikedAccounts',
-              foreignField: '_id'
-            })
-            .then(data => {
-              res.status(200).json({
-                response: data[0].replies
-              });
-            }).catch(error => res.status(400).send(error.message));
+            .then(data => res.status(200).json({ response: data, message: 'get comment replies' })).catch(error => res.status(400).send(error.message));
         case 'singlecomment':
           return Comment.findById(commentid)
             .select({
@@ -915,7 +857,7 @@ router.route("/")
               });
             });
         case 'comment':
-          const { content: body, isLiked: likedComment, isDisliked: dislikedComment } = req.body;
+          const { content: body, private: hideAuthor, isLiked: likedComment, isDisliked: dislikedComment } = req.body;
           if (interact == 'rate') {
             if (likedComment && !dislikedComment) {
 
@@ -955,13 +897,12 @@ router.route("/")
             }
           }
           if (interact == 'reply') {
-
             return Comment.create({
               body: body,
+              comment: commentid,
               account: accountId,
               post: postid,
-              like: 0,
-              dislike: 0
+              hideAuthor: hideAuthor
             }).then(data => Promise.all([Comment.findOneAndUpdate({
               _id: commentid,
             }, {
@@ -1049,17 +990,21 @@ router.route("/")
             });
           }
           function removeAttachmentOnMongo() {
-            return new Promise((onFulfill) => Attachment.findOneAndRemove({ post: postid }, null, (err, doc, res) => {
+            return new Promise((onFulfill) => Attachment.deleteMany({ post: postid }, null, (err, doc, res) => {
               if (err) return res.status(500).send("Cannot delete attachment now!");
               onFulfill(doc);
             }));
           }
           function removeCommentOfPost() {
-            return new Promise((onFulfill) => Comment.findOneAndRemove({ post: postid }, null, (err, doc, res) => {
+            console.log(postid);
+            return new Promise((onFulfill) => Comment.deleteMany({ post: postid }, null, (err, doc, res) => {
               console.log('delete comment');
               if (err) return res.status(500).send("Cannot delete comment now!");
               onFulfill(doc);
             }));
+          }
+          function removeComment() {
+            return Comment.findOneAndRemove({ post: postid });
           }
           function removePost() {
             return new Promise((onFulfill) => Post.findByIdAndRemove(postid, null, (err, doc, res) => {
@@ -1082,13 +1027,15 @@ router.route("/")
           return Post.remove({}).then(response => res.status(203).send('deleted all posts')).catch(e => res.status(400).send('delete failed'));
         case 'all attachment':
           return Attachment.remove({}).then(response => res.status(203).send('deleted all attachments')).catch(e => res.status(400).send('delete failed'));
+        case 'all comment':
+          return Comment.remove({}).then(response => res.status(203).send('deleted all comments')).catch(e => res.status(400).send('delete failed'));
         default:
           res.status(404).json({
             error: 'Not found query'
           })
       }
     } catch (error) {
-
+      res.status(500).send(error.message);
     }
   });
 

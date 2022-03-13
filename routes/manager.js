@@ -26,7 +26,7 @@ router.route('/')
                 }).then(data => res.status(201).json({ response: data, message: 'Created category successfully' }))
                     .catch(error => res.status(500).send("Created category failed"));
             default:
-                break;
+                return res.status(500).send("Don't find query");
         }
     })
 

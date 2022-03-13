@@ -35,15 +35,14 @@ const corsList = [
     'https://cms-fstaff.netlify.app',
 ];
 server.use(cors({
-    // origin: process.env.NODE_ENV === 'development' ? '*' : (origin, cb) => {
-    //     if (corsList.indexOf(origin) !== -1) cb(null, true);
-    //     else cb(new Error('Not allowed by CORS'))
-    // },
-    origin: (origin, cb) => {
-        console.log(origin);
+    origin: process.env.NODE_ENV === 'development' ? '*' : (origin, cb) => {
         if (corsList.indexOf(origin) !== -1) cb(null, true);
         else cb(new Error('Not allowed by CORS'))
     },
+    // origin: (origin, cb) => {
+    //     if (corsList.indexOf(origin) !== -1) cb(null, true);
+    //     else cb(new Error('Not allowed by CORS'))
+    // },
     optionsSuccessStatus: 200
 }));
 server.use('/public', express.static(path.join(__dirname, 'public')))
@@ -148,7 +147,7 @@ async function createNotification(socket) {
             action === actions.EDIT_POST && "edited their post"
     }
 
-    return socket.on('notify', (data) => {
+    socket.on('notify', (data) => {
         const { id: userId } = socket.user;
         const { id, type, url, to: target } = data;
         return Promise.all([Notification.create({
@@ -177,6 +176,24 @@ async function sendNotifications(socket, to = socketTargets.ALL_USERS, data) {
     }
     return socket.to(sessions[to]).emit("notify", data);
 }
+async function responseComment(socket) {
+    socket.on('comment', data => {
+        // const { postId, commentId } = data;
+        socket.broadcast.emit('comment', data);
+    });
+}
+async function responseLikePost(socket) {
+    socket.on('like post', data => {
+        // const { userId, postId } = data;
+        socket.broadcast.emit('like post', data);
+    })
+}
+async function responseDislikePost(socket) {
+    socket.on('dislike post', data => {
+        const { userId, postId } = data;
+        socket.broadcast.emit('dislike post', data);
+    })
+}
 async function handleOfflineUsers(socket, onlineHandler, offlineHandler) {
     if (socket.connected) {
         onlineHandler();
@@ -203,7 +220,13 @@ io.on('connection', async (socket) => {
     createNotification(socket);
     // 2.2. add notification
     receiveMessage(socket);
-    // 3. 
+    // 3. comment real-time
+    responseComment(socket);
+    // 4. like real-time
+    responseLikePost(socket);
+    // 5. dislike real-time
+    responseDislikePost(socket);
+    // 4. 
     leaveSession(socket);
 });
 
