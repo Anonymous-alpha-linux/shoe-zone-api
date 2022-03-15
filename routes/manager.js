@@ -36,7 +36,8 @@ router.route('/')
                     workTitle,
                     expireTime,
                     eventTime,
-                    manager
+                    manager,
+                    members: accountId
                 }).then(data => {
                     return res.status(200).json({
                         response: data
@@ -52,6 +53,7 @@ router.route('/')
                 return res.status(500).send("Don't find query");
         }
     })
+    .put(async (req, res) => { })
     .delete(async (req, res) => {
         const { view, page = 0, filter = filter_actions,
             count = 2, id = 0, postid, commentid, accountid } = req.query;
