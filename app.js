@@ -30,19 +30,16 @@ const io = new Server(httpServer, {
 // 1. Using middleware
 server.use(express.json()); // supporting the json body parser
 server.use(express.urlencoded({ extended: true })); // supporting the encoded url parser 
-const corsList = [
-    'http://localhost:3000',
-    'https://cms-fstaff.netlify.app',
-];
+const corsList = ['http://localhost:3000', 'https://cms-fstaff.netlify.app'];
 server.use(cors({
-    // origin: process.env.NODE_ENV === 'development' ? '*' : (origin, cb) => {
-    //     if (corsList.indexOf(origin) !== -1) cb(null, true);
-    //     else cb(new Error('Not allowed by CORS'))
-    // },
-    origin: (origin, cb) => {
+    origin: process.env.NODE_ENV === 'development' ? '*' : (origin, cb) => {
         if (corsList.indexOf(origin) !== -1) cb(null, true);
         else cb(new Error('Not allowed by CORS'))
     },
+    // origin: (origin, cb) => {
+    //     if (corsList.indexOf(origin) !== -1) cb(null, true);
+    //     else cb(new Error('Not allowed by CORS'))
+    // },
     optionsSuccessStatus: 200
 }));
 server.use('/public', express.static(path.join(__dirname, 'public')))
