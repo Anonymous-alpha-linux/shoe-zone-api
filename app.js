@@ -35,18 +35,17 @@ const corsList = [
     'https://cms-fstaff.netlify.app',
 ];
 server.use(cors({
-    origin: process.env.NODE_ENV === 'development' ? '*' : (origin, cb) => {
-        if (corsList.indexOf(origin) !== -1) cb(null, true);
-        else cb(new Error('Not allowed by CORS'))
-    },
-    // origin: (origin, cb) => {
+    // origin: process.env.NODE_ENV === 'development' ? '*' : (origin, cb) => {
     //     if (corsList.indexOf(origin) !== -1) cb(null, true);
     //     else cb(new Error('Not allowed by CORS'))
     // },
+    origin: (origin, cb) => {
+        if (corsList.indexOf(origin) !== -1) cb(null, true);
+        else cb(new Error('Not allowed by CORS'))
+    },
     optionsSuccessStatus: 200
 }));
 server.use('/public', express.static(path.join(__dirname, 'public')))
-
 // Function to serve all static files
 // inside public directory.
 // server.use(express.static('public'));
@@ -182,6 +181,12 @@ async function responseComment(socket) {
         socket.broadcast.emit('comment', data);
     });
 }
+async function responseCommentReply(socket) {
+    socket.on('reply comment', data => {
+        const { postId, commentId, replyId } = data;
+        socket.broadcast.emit('reply comment', data);
+    });
+}
 async function responseLikePost(socket) {
     socket.on('like post', data => {
         // const { userId, postId } = data;
@@ -222,6 +227,8 @@ io.on('connection', async (socket) => {
     receiveMessage(socket);
     // 3. comment real-time
     responseComment(socket);
+    // 3.1 reply comment real-time
+    responseCommentReply(socket);
     // 4. like real-time
     responseLikePost(socket);
     // 5. dislike real-time

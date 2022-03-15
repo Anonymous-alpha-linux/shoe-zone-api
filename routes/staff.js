@@ -458,8 +458,6 @@ router.route("/")
             .limit(count)
             .lookup({ from: 'accounts', as: 'account', localField: 'account', foreignField: '_id', pipeline: [{ $project: { username: 1, email: 1, profileImage: 1 } }] })
             .unwind('account')
-            // .lookup({ from: 'accounts', as: 'likedAccounts', localField: 'likedAccounts', foreignField: '_id' })
-            // .lookup({ from: 'accounts', as: 'dislikedAccounts', localField: 'dislikedAccounts', foreignField: '_id' })
             .then(data => {
               return res.status(200).json({
                 response: data
@@ -996,7 +994,6 @@ router.route("/")
             }));
           }
           function removeCommentOfPost() {
-            console.log(postid);
             return new Promise((onFulfill) => Comment.deleteMany({ post: postid }, null, (err, doc, res) => {
               console.log('delete comment');
               if (err) return res.status(500).send("Cannot delete comment now!");
