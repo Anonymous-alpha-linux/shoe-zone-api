@@ -1,5 +1,5 @@
 var express = require('express');
-const { Category } = require('../models');
+const { Category, Workspace } = require('../models');
 var router = express.Router();
 let filter_actions = {
     DEFAULT: 0,
@@ -24,7 +24,24 @@ router.route('/')
     .post(async (req, res) => {
         const { view, page = 0, filter = filter_actions,
             count = 2, id = 0, postid, commentid, accountid } = req.query;
+        let { accountId, roleId, workspace } = req.user;
         switch (view) {
+            case 'workspace':
+                const closureDate = new Date(Date.now());
+                closureDate.setDate(closureDate.getDate() + 30);
+                const eventDate = new Date(closureDate);
+                eventDate.setDate(eventDate.getDate() + 7);
+                const { workTitle, expireTime = closureDate, eventTime = eventDate, manager = accountId } = req.body;
+                return Workspace.create({
+                    workTitle,
+                    expireTime,
+                    eventTime,
+                    manager
+                }).then(data => {
+                    return res.status(200).json({
+                        response: data
+                    });
+                }).catch(error => res.status(500).send(error.message));
             case 'category':
                 const { categoryName } = req.body;
                 return Category.create({
