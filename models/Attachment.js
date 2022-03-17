@@ -22,6 +22,10 @@ const attachmentSchema = new mongoose.Schema({
         type: Date,
         default: Date.now()
     },
+    post: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'Post'
+    },
     online_url: String,
     api_key: String,
     signature: String,
@@ -29,6 +33,10 @@ const attachmentSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     }
+})
+
+attachmentSchema.pre(['deleteOne', 'deleteMany'], function (next) {
+    this.model('Post').findOneAndRemove({ attachments: { $in: this._id } }, next());
 })
 
 module.exports = attachmentSchema;

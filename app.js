@@ -165,12 +165,21 @@ async function createNotification(socket) {
     });
 }
 async function sendNotifications(socket, to = socketTargets.ALL_USERS, data) {
-    if (to == socketTargets.ALL_USERS)
-        return socket.emit('notify', data);
-    else if (to == socketTarget.WITHOUT_BROADCAST) {
-        return socket.broadcast.emit('notify', data);
+    if (to == socketTargets.ALL_USERS) {
+        socket.emit('notify', data);
+        Account.updateMany({}, {
+            newNotification: true
+        })
     }
-    return socket.to(sessions[to]).emit("notify", data);
+    else if (to == socketTarget.WITHOUT_BROADCAST) {
+        socket.broadcast.emit('notify', data);
+        Account.updateMany({ _id: { $ne: socket.user.id } }, {
+            newNotification: true
+        })
+    }
+    else {
+        socket.to(sessions[to]).emit("notify", data);
+    }
 }
 async function responseComment(socket) {
     socket.on('comment', data => {

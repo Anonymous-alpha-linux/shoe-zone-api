@@ -38,17 +38,18 @@ const accountSchema = new Schema({
         required: false,
         default: '61f7bc0f4116f253caf86586'
     },
-    notifications: [{
-        isRead: {
-            type: Boolean,
-            default: false
-        },
-        notification: {
-            type: SchemaTypes.ObjectId,
-            ref: 'Notification',
-            required: true
-        }
-    }],
+    // notifications: [{
+    //     isRead: {
+    //         type: Boolean,
+    //         default: false
+    //     },
+    //     notification: {
+    //         type: SchemaTypes.ObjectId,
+    //         ref: 'Notification',
+    //         required: true
+    //     }
+    // }],
+    newNotification: { type: Boolean, default: false },
     refreshToken: String,
 }, {
     timestamps: true

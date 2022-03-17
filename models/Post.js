@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const { } = require('.');
 
 const postSchema = new mongoose.Schema({
     content: {
@@ -37,18 +36,21 @@ const postSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    comments: [{
-        type: mongoose.SchemaTypes.ObjectId,
-        ref: 'Comment'
-    }],
     attachments: [{
         type: mongoose.SchemaTypes.ObjectId,
         ref: 'Attachment'
+    }],
+    comments: [{
+        type: mongoose.SchemaTypes.ObjectId,
+        ref: 'Comment'
     }],
     workspace: {
         type: mongoose.SchemaTypes.ObjectId,
         ref: 'Workspace'
     }
+})
+postSchema.pre(['findByIdAndRemove'], function (next) {
+    this.model('Attachment').remove({ _id: { $in: '$attachments' } }, next);
 })
 
 module.exports = postSchema;

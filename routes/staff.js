@@ -64,7 +64,6 @@ router.route("/")
         case 'singleworkspace':
           return Workspace.findById(workspaceid).then(data => res.status(200).json({ response: data })).catch(error => res.status(401).send(error.message));
         case 'manager':
-          console.log("get manager info", accountid);
           return Promise.all([
             Account.findById(accountid, "", {
               select: { profileImage: 1, username: 1, email: 1, role: 1 },
@@ -232,8 +231,8 @@ router.route("/")
             .lookup({ from: 'accounts', as: 'postAuthor', localField: 'postAuthor', foreignField: '_id' })
             .unwind("postAuthor")
             .lookup({ from: 'accounts', as: 'postOwners', localField: 'postOwners', foreignField: '_id' })
-            .lookup({ from: 'accounts', as: 'likedAccounts', localField: 'likedAccounts', foreignField: '_id' })
-            .lookup({ from: 'accounts', as: 'dislikedAccounts', localField: 'dislikedAccounts', foreignField: '_id' })
+            // .lookup({ from: 'accounts', as: 'likedAccounts', localField: 'likedAccounts', foreignField: '_id' })
+            // .lookup({ from: 'accounts', as: 'dislikedAccounts', localField: 'dislikedAccounts', foreignField: '_id' })
             .lookup({ from: 'attachments', as: 'attachments', localField: 'attachments', foreignField: '_id' })
             .then(data => {
               return res.status(200).json({
@@ -466,7 +465,7 @@ router.route("/")
         case 'comment reply':
           page = parseInt(page);
           count = parseInt(count);
-          console.log(page, count);
+
           return Comment.aggregate([{
             $match: { comment: mongoose.Types.ObjectId(commentid) }
           }])
@@ -482,7 +481,7 @@ router.route("/")
               reply: { $size: '$replies' },
               replies: 1,
             })
-            .sort({ createdAt: -1 })
+            .sort({ createdAt: 1 })
             .skip(page * count)
             .limit(count)
             .lookup({ from: 'accounts', as: 'account', localField: 'account', foreignField: '_id' })
@@ -500,17 +499,13 @@ router.route("/")
               createdAt: 1,
               hideAuthor: 1,
               body: 1,
-              replies: 1
             })
             .populate([{
-              path: 'account likedAccounts dislikedAccounts',
+              path: 'account',
               select: {
                 username: 1,
                 profileImage: 1,
               }
-            },
-            {
-              path: 'replies',
             }])
             .then(data => res.status(200).json({
               response: data
@@ -551,12 +546,11 @@ router.route("/")
                   filename_override: `${new Date(Date.now()).toLocaleString('en-uk', {
                     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
                   })}`,
-                  use_filename: true
+                  use_filename: true,
+                  unique_filename: true,
+                  resource_type: 'auto'
                 }, function (error, result) {
                   if (error) {
-                    files.map(file => {
-                      cloudinary.uploader.destroy(file.path);
-                    });
                     return reject(error);
                   }
                   resolve(result);
@@ -564,39 +558,54 @@ router.route("/")
               });
             }))
           }
-          function createAttachmentFromCloudinary(file) {
-            const {
-              public_id,
-              signature,
-              format,
-              resource_type,
-              created_at,
-              bytes,
-              url,
-              secure_url,
-              api_key
-            } = file;
-            return Attachment.create({
-              fileName: public_id,
-              filePath: secure_url || url,
-              fileType: `${resource_type}/${format}`,
-              fileFormat: format,
-              fileSize: bytes,
-              createdAt: created_at,
-              online_url: secure_url || url,
-              api_key: api_key,
-              signature,
-              downloadable: true
+          function createAttachmentFromCloudinary(files, postId) {
+            files = files.map(file => {
+              const {
+                public_id,
+                signature,
+                format,
+                resource_type,
+                created_at,
+                bytes,
+                url,
+                secure_url,
+                api_key
+              } = file;
+              return {
+                fileName: public_id,
+                filePath: secure_url || url,
+                fileType: `${resource_type}/${format || 'document'}`,
+                fileFormat: format,
+                fileSize: bytes,
+                post: postId,
+                createdAt: created_at,
+                online_url: secure_url || url,
+                api_key: api_key,
+                signature,
+                downloadable: true
+              }
             });
-          }
-          function createAttachment(file) {
-            return Attachment.create({
-              // fileName: file.filename,
-              // filePath: file.path,
-              // fileType: file.mimetype,
-              // fileSize: file.size,
-              downloadable: true
-            })
+            return new Promise((resolve, reject) => {
+              Attachment.insertMany(files, function (error, docs) {
+                if (error) reject(error);
+                resolve(docs);
+              })
+            });
+            // return new Promise((resolve, reject) => {
+            //   return Attachment.create({
+            //     fileName: public_id,
+            //     filePath: secure_url || url,
+            //     fileType: `${resource_type}/${format || 'document'}`,
+            //     fileFormat: format,
+            //     fileSize: bytes,
+            //     post: postId,
+            //     createdAt: created_at,
+            //     online_url: secure_url || url,
+            //     api_key: api_key,
+            //     signature,
+            //     downloadable: true
+            //   }).then(attachment => resolve(attachment)).catch(error => reject(error));
+            // })
           }
           function createNewPost(files) {
             return Post.create({
@@ -607,9 +616,8 @@ router.route("/")
               createdAt: Date.now(),
               hideAuthor: private,
               workspace: req.user.workspace
-            });
+            })
           }
-
           // 1. Create a new folder before saving file
           return createFolderOnCloudinary()
             // 2. Upload files to the upset folder
@@ -618,15 +626,12 @@ router.route("/")
             })
             // 3. Create attachment
             .then(uploadFiles => {
-              return Promise.all(uploadFiles.map(file => {
-                return createAttachmentFromCloudinary(file);
-              }))
+              return createAttachmentFromCloudinary(uploadFiles);
             })
-            // 4. Add Attachment to post and create a new one
-            .then(attachments => {
-              return createNewPost(attachments);
+            .then(attachmentList => {
+              return createNewPost(attachmentList);
             })
-            // 5. Find post
+            // 4. Find post
             .then(data => {
               return res.status(200).json({
                 response: [data],
@@ -741,43 +746,78 @@ router.route("/")
                   filename_override: `${new Date(Date.now()).toLocaleString('en-uk', {
                     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
                   })}`,
-                  use_filename: true
+                  use_filename: true,
+                  unique_filename: true,
+                  resource_type: 'auto'
                 }, function (error, result) {
                   if (error) {
-                    reject(error);
+                    return reject(error);
                   }
                   resolve(result);
                 });
               });
             }))
           }
-          function createAttachmentFromCloudinary(file) {
-            const {
-              public_id,
-              signature,
-              format,
-              resource_type,
-              created_at,
-              bytes,
-              url,
-              secure_url,
-              api_key
-            } = file;
-            return Attachment.create({
-              fileName: public_id,
-              filePath: secure_url || url,
-              fileType: `${resource_type}/${format}`,
-              fileFormat: format,
-              fileSize: bytes,
-              createdAt: created_at,
-              online_url: secure_url || url,
-              api_key: api_key,
-              signature,
-              downloadable: true
+          function createAttachmentFromCloudinary(files) {
+            const newFiles = files.map(file => {
+              const {
+                public_id,
+                signature,
+                format,
+                resource_type,
+                created_at,
+                bytes,
+                url,
+                secure_url,
+                api_key
+              } = file;
+              return {
+                fileName: public_id,
+                filePath: secure_url || url,
+                fileType: `${resource_type}/${format || 'document'}`,
+                fileFormat: format || 'document',
+                fileSize: bytes,
+                post: postid,
+                createdAt: created_at,
+                online_url: secure_url || url,
+                api_key: api_key,
+                signature,
+                downloadable: true
+              }
+            });
+            return new Promise((resolve, reject) => {
+              Attachment.insertMany(newFiles, function (error, docs) {
+                if (error) reject(error);
+                resolve(docs);
+              })
             });
           }
-          function removeAttachmentFromCloudinary(file) {
-            return cloudinary.uploader.destroy(file.fileName);
+          async function clearAttachmentOnCloudinary() {
+            const { attachments } = await Post.findById(postid).exec();
+            return new Promise(resolve => {
+              Attachment.where({ _id: { $in: attachments } })
+                .then(result => {
+                  return Promise.all(result.map(attach => {
+                    return new Promise((resolve) => {
+                      cloudinary.uploader.destroy(attach.fileName, { resource_type: attach.fileType.split('/')[0] }, function (error, result) {
+                        if (error) throw new Error(error);
+                        resolve(result);
+                      });
+                      removeSingleAttachmentOnMongo(attach._id);
+                    })
+                  }));
+                })
+                .then(data => {
+                  resolve(data);
+                })
+                .catch(error => res.status(500).send("Cannot clear attachment from Cloudinary"));
+            })
+          }
+          function removeSingleAttachmentOnMongo(attachmentId) {
+            return new Promise((onFulfill) => Attachment.findByIdAndRemove({ _id: attachmentId }, null, (err, doc, res) => {
+              if (err) return res.status(500).send("Cannot delete attachment now!");
+              onFulfill(doc);
+            }));
           }
           function updatePost(files) {
             return new Promise((resolve, reject) => Post.findByIdAndUpdate(postid, {
@@ -830,14 +870,11 @@ router.route("/")
           // 1. Create a new folder before saving file
           return createFolderOnCloudinary()
             // 2. Upload files to the upset folder
-            .then(folder => {
-              return uploadFilesToCloudinaryFolder(folder);
-            })
+            .then(folder => { return uploadFilesToCloudinaryFolder(folder) })
             // 3. Create attachment
             .then(uploadFiles => {
-              return Promise.all(uploadFiles.map(file => {
-                return createAttachmentFromCloudinary(file);
-              }))
+              clearAttachmentOnCloudinary();
+              return createAttachmentFromCloudinary(uploadFiles);
             })
             // 4. Add Attachment to post and create a new one
             .then(attachments => {
@@ -858,7 +895,6 @@ router.route("/")
           const { content: body, private: hideAuthor, isLiked: likedComment, isDisliked: dislikedComment } = req.body;
           if (interact == 'rate') {
             if (likedComment && !dislikedComment) {
-
               return Comment.findByIdAndUpdate(commentid, {
                 $addToSet: {
                   'likedAccounts': accountId
@@ -866,9 +902,12 @@ router.route("/")
                 $pull: {
                   'dislikedAccounts': accountId
                 }
-              }).then(data => res.status(201).json({
-                message: 'Liked Comment'
-              })).catch(error => res.status(400).send('Cannot liked now'));
+              }).then(data => {
+                return res.status(201).json({
+                  response: data._id,
+                  message: 'Liked Comment'
+                })
+              }).catch(error => res.status(400).send('Cannot liked now'));
             }
             if (!likedComment && dislikedComment) {
 
@@ -978,30 +1017,37 @@ router.route("/")
       switch (view) {
         case 'post':
           async function clearAttachmentOnCloudinary() {
-            return new Promise((resolve, reject) => {
-              return Attachment.find({ post: postid }).then(data => {
-                cloudinary.uploader.destroy(data[0].fileName, function (error, result) {
-                  if (error) reject(error);
-                  resolve(result);
+            const { attachments } = await Post.findById(postid).exec();
+            return new Promise(resolve => {
+              Attachment.where({ _id: { $in: attachments } })
+                .then(result => {
+                  return Promise.all(result.map(attach => {
+                    return new Promise((resolve) => {
+                      cloudinary.uploader.destroy(attach.fileName, { resource_type: attach.fileType.split('/')[0] }, function (error, result) {
+                        if (error) throw new Error(error);
+                        resolve(result);
+                      });
+                      removeAttachmentOnMongo(attach._id);
+                    })
+                  }));
                 })
-              });
-            });
+                .then(data => {
+                  resolve(data);
+                })
+                .catch(error => res.status(500).send("Cannot clear attachment from Cloudinary"));
+            })
           }
-          function removeAttachmentOnMongo() {
-            return new Promise((onFulfill) => Attachment.deleteMany({ post: postid }, null, (err, doc, res) => {
+          function removeAttachmentOnMongo(attachmentId) {
+            return new Promise((onFulfill) => Attachment.findByIdAndRemove({ _id: attachmentId }, null, (err, doc, res) => {
               if (err) return res.status(500).send("Cannot delete attachment now!");
               onFulfill(doc);
             }));
           }
           function removeCommentOfPost() {
             return new Promise((onFulfill) => Comment.deleteMany({ post: postid }, null, (err, doc, res) => {
-              console.log('delete comment');
               if (err) return res.status(500).send("Cannot delete comment now!");
               onFulfill(doc);
             }));
-          }
-          function removeComment() {
-            return Comment.findOneAndRemove({ post: postid });
           }
           function removePost() {
             return new Promise((onFulfill) => Post.findByIdAndRemove(postid, null, (err, doc, res) => {
@@ -1009,17 +1055,20 @@ router.route("/")
               onFulfill(doc);
             }));
           }
-
           return clearAttachmentOnCloudinary().then(res => {
-            const { result } = res;
-            if (result === 'ok') {
-              return removeAttachmentOnMongo()
-            }
-            throw new Error("You cannot delete this attachment");
-          }).then(data => removeCommentOfPost())
+            return res.map(e => {
+              // if (e !== 'ok') {
+              //   throw new Error("You cannot delete this attachment");
+              // }
+              return e;
+            });
+          })
+            .then(data => {
+              removeCommentOfPost();
+            })
             .then(data => removePost())
             .then(data => res.status(200).json({ message: 'Deleted post successfully' }))
-            .catch(error => res.status(400).send(error.message))
+            .catch(error => res.status(403).send(error.message))
         case 'all post':
           return Post.remove({}).then(response => res.status(203).send('deleted all posts')).catch(e => res.status(400).send('delete failed'));
         case 'all attachment':
