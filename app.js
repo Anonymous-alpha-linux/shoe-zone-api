@@ -1,10 +1,10 @@
 require('dotenv/config');
 const routes = require('./routes');
 const { connectToMongo } = require('./config');
-const { isAuthentication, isAuthorization, EmailService } = require('./utils');
+const { isAuthentication, isAuthorization, EmailService, cloudinary } = require('./utils');
 const { roles } = require('./fixtures');
 const { Token, multer } = require('./utils');
-const { Account, Workspace, Notification } = require('./models');
+const { Account, Workspace, Notification, Post, Attachment } = require('./models');
 const { socketTargets } = require('./fixtures')
 const http = require('http');
 const express = require('express');
@@ -75,6 +75,23 @@ server.use('/api/v1/customer',
     isAuthorization(roles.ADMIN),
     multer.array('files'),
     routes.admin);
+server.get("/api/v1/download",
+    isAuthentication,
+    isAuthorization(roles.ADMIN, roles.QA_COORDINATOR, roles.QA_MANAGER),
+    async function (req, res) {
+        const { postid } = req.query;
+        const { attachments } = await Post.findById(postid);
+        const foundAttachments = await Attachment.where({ _id: { $in: attachments } });
+        console.log(foundAttachments.map(a => a.fileName));
+        return cloudinary.uploader.create_zip({ resource_type: 'all', public_ids: foundAttachments.map(attach => attach.fileName) }, function (err, result) {
+            console.log(result);
+            if (err) {
+                console.log(err);
+                return res.status(500).send(err);
+            }
+            return res.status(200).download(result).json({ message: 'downloaded zip file' });
+        });
+    });
 // 2.5. send email
 server.get('/send_email', isAuthentication, async (req, res) => {
     try {

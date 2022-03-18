@@ -1,5 +1,5 @@
 var express = require('express');
-const { Category, Workspace } = require('../models');
+const { Category, Workspace, Account } = require('../models');
 var router = express.Router();
 let filter_actions = {
     DEFAULT: 0,
@@ -14,6 +14,8 @@ router.route('/')
         let { view, page = 0, filter = filter_actions.DEFAULT,
             count = 2, id = 0, postid, commentid, accountid } = req.query;
         switch (view) {
+            case 'account':
+                return Account.find().then(data => res.status(200).json({ response: data })).catch(error => res.status(500).send(error.message));
             case 'category':
                 return Category.find().then(data => res.status(200).json({ response: data }))
                     .catch(error => res.status(401).send('Get categories failed'));
