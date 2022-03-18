@@ -17,6 +17,11 @@ router.route('/')
                 })
                     .populate({ path: 'role', select: 'roleName' })
                     .then(data => res.status(200).json({ response: data, message: 'get the list of accounts successfully!' })).catch(error => res.status(500).send(error.message));
+            case 'role':
+                return Role.find().select({
+                    roleName: 1
+                })
+                    .then(data => res.status(200).json({ response: data, message: 'get the list of roles successfully!' })).catch(error => res.status(500).send(error.message));
             case 'category':
                 return Category.find().then(data => res.status(200).json({ response: data }))
                     .catch(error => res.status(401).send('Get categories failed'));
