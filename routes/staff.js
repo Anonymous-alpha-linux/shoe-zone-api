@@ -541,14 +541,16 @@ router.route("/")
             const { path, name } = folder;
             return Promise.all(files.map(file => {
               return new Promise((resolve, reject) => {
+                let fileExtension = /[^.]+$/.exec(file.originalname);
                 cloudinary.uploader.upload(file.path, {
                   folder: path,
                   filename_override: `${new Date(Date.now()).toLocaleString('en-uk', {
                     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
-                  })}`,
+                  })}}`,
                   use_filename: true,
                   unique_filename: true,
-                  resource_type: 'auto'
+                  resource_type: 'auto',
+                  format: fileExtension[0]
                 }, function (error, result) {
                   if (error) {
                     return reject(error);
@@ -556,7 +558,7 @@ router.route("/")
                   resolve(result);
                 });
               });
-            }))
+            }));
           }
           function createAttachmentFromCloudinary(files, postId) {
             files = files.map(file => {
@@ -741,14 +743,15 @@ router.route("/")
             const { path, name } = folder;
             return Promise.all(files.map(file => {
               return new Promise((resolve, reject) => {
+                let fileExtension = /[^.]+$/.exec(file.originalname);
                 cloudinary.uploader.upload(file.path, {
                   folder: path,
                   filename_override: `${new Date(Date.now()).toLocaleString('en-uk', {
                     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
-                  })}`,
+                  })}.${fileExtension[0]}`,
                   use_filename: true,
                   unique_filename: true,
-                  resource_type: 'auto'
+                  resource_type: 'auto',
                 }, function (error, result) {
                   if (error) {
                     return reject(error);

@@ -83,14 +83,14 @@ server.get("/api/v1/download",
         const { attachments } = await Post.findById(postid);
         const foundAttachments = await Attachment.where({ _id: { $in: attachments } });
         console.log(foundAttachments.map(a => a.fileName));
-        return cloudinary.uploader.create_zip({ resource_type: 'all', public_ids: foundAttachments.map(attach => attach.fileName) }, function (err, result) {
+        try {
+            const result = cloudinary.utils.download_zip_url({ resource_type: 'all', public_ids: foundAttachments.map(attach => attach.fileName) });
             console.log(result);
-            if (err) {
-                console.log(err);
-                return res.status(500).send(err);
-            }
-            return res.status(200).download(result).json({ message: 'downloaded zip file' });
-        });
+            res.status(200).send('download item');
+        }
+        catch (error) {
+            res.status(500).send('Cannot download this item')
+        }
     });
 // 2.5. send email
 server.get('/send_email', isAuthentication, async (req, res) => {
@@ -102,6 +102,29 @@ server.get('/send_email', isAuthentication, async (req, res) => {
         res.send(error.message)
     }
 });
+
+server.post('/upload', isAuthentication, multer.array("files"), (req, res) => {
+    const files = req.files;
+    return Promise.all(files.map(file => {
+        return new Promise((resolve, reject) => {
+            let fileExtension = /[^.]+$/.exec(file.originalname);
+            cloudinary.uploader.upload(file.path, {
+                folder: path,
+                use_filename: true,
+                filename_override: `${new Date(Date.now()).toLocaleString('en-uk', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}`,
+                unique_filename: true,
+                discard_original_filename: true,
+                resource_type: 'auto',
+                format: fileExtension[0]
+            }, function (error, result) {
+                if (error) {
+                    res.status(500).json({ error })
+                }
+                resolve(result);
+            });
+        });
+    })).then(result => res.status(200).json({ files, result }))
+})
 // Catch page error with server routing
 server.use((req, res) => {
     res.status(404).json({

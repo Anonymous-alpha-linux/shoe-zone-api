@@ -4,6 +4,7 @@ const path = require('path');
 
 const storage = multer.diskStorage({
     destination: function (req, res, cb) {
+
         const { accountId, account, role } = req.user,
             { view } = req.query,
             path = view === 'profile' ? `./public/images/${accountId}` : `./public/documents/${role}/${account + '-' + accountId}`;
