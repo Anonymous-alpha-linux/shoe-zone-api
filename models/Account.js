@@ -6,8 +6,8 @@ const accountSchema = new Schema({
     username: {
         type: String,
         required: true,
-        unique: true,
-        maxlength: 20
+        // unique: true,
+        maxlength: 40
     },
     email: {
         type: String,

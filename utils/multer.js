@@ -4,10 +4,10 @@ const path = require('path');
 
 const storage = multer.diskStorage({
     destination: function (req, res, cb) {
-
         const { accountId, account, role } = req.user,
-            { view } = req.query,
-            path = view === 'profile' ? `./public/images/${accountId}` : `./public/documents/${role}/${account + '-' + accountId}`;
+            { view } = req.query;
+        const { username } = req.body;
+        let path = view === 'profile' ? `./public/images/${username}` : `./public/documents/${role}/${account + '-' + accountId}`;
         fs.mkdirSync(path, { recursive: true });
         cb(null, path)
     },

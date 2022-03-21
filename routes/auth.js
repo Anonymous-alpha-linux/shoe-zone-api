@@ -1,168 +1,179 @@
 const bcryptjs = require('bcryptjs');
 var express = require('express');
-const { Account, Role, UserProfile, Notification } = require('../models');
+const { roles } = require('../fixtures');
+const { Account, Role, UserProfile, Notification, Attachment } = require('../models');
 const { EmailService, isAuthentication, isAuthorization, Token } = require('../utils');
 // const { emailService } = require('../utils');
 var router = express.Router();
 /* GET home page. */
-router
-    .get('/', isAuthentication, (req, res) => {
-        let { view, page, count } = req.query;
-        const { accountId } = req.user;
-        try {
-            switch (view) {
-                case 'profile':
-                    return UserProfile
-                        .findOne({ account: accountId }, 'account profileImage address introduction gender age firstName lastName phone', {
-                            populate: {
-                                path: 'account',
-                                select: 'role',
-                                populate: {
-                                    path: 'role',
-                                    select: 'roleName'
-                                }
-                            }
-                        }).then(data => {
-                            res.status(200).json({
-                                response: data
-                            })
-                        }).catch(error => res.status(400).send(error.message));
-                case 'notification':
-                    page = parseInt(page);
-                    count = parseInt(count);
-                    return Notification.aggregate()
-                        .match({ from: { $ne: accountId } })
-                        .sort({ createdAt: -1 })
-                        .skip(page * count)
-                        .limit(count)
-                        .project({ from: 1, createdAt: 1, message: 1, url: 1, type: 1 })
-                        .lookup({ from: 'accounts', as: 'from', localField: 'from', foreignField: '_id' })
-                        .unwind('from')
-                        .then(data => {
-                            return res.status(200).json({
-                                response: data
-                            });
-                        }).catch(error => res.status(400).send({ error: error.message }));
-
-                default:
-                    return res.status(200).json({
-                        isLoggedIn: true,
-                        success: true,
-                        ...req.user
-                    });
-            }
-        } catch (error) {
-            return res.status(401).json({
-                isLoggedIn: false,
-                success: false,
-                error: error.message
-            });
-        }
-
-    }).put('/', isAuthentication, (req, res) => {
-        const { accountId } = req.user;
-        const { view } = req.query;
+router.get('/', isAuthentication, (req, res) => {
+    let { view, page, count } = req.query;
+    const { accountId } = req.user;
+    try {
         switch (view) {
             case 'profile':
-                const { firstName, lastName, address, phone, introduction, gender, birth } = req.body;
-                const dateOfBirth = new Date(birth);
-                const doc = {
-                    firstName,
-                    lastName,
-                    phone,
-                    address,
-                    introduction,
-                    gender,
-                    age: (new Date(Date.now())).getFullYear() - dateOfBirth.getFullYear(),
-                }
-                // 1. Check if account have profile
                 return UserProfile
-                    .findOneAndUpdate({ account: accountId }, {
-                        ...doc,
-                        $set: {
-                            account: accountId
+                    .findOne({ account: accountId }, 'account profileImage address introduction gender age firstName lastName phone', {
+                        populate: {
+                            path: 'account',
+                            select: 'role',
+                            populate: {
+                                path: 'role',
+                                select: 'roleName'
+                            }
                         }
-                    }, { upsert: true, new: true, setDefaultsOnInsert: true })
+                    }).then(data => {
+                        res.status(200).json({
+                            response: data
+                        })
+                    }).catch(error => res.status(400).send(error.message));
+            case 'notification':
+                page = parseInt(page);
+                count = parseInt(count);
+                return Notification.aggregate()
+                    .match({ from: { $ne: accountId } })
+                    .sort({ createdAt: -1 })
+                    .skip(page * count)
+                    .limit(count)
+                    .project({ from: 1, createdAt: 1, message: 1, url: 1, type: 1 })
+                    .lookup({ from: 'accounts', as: 'from', localField: 'from', foreignField: '_id' })
+                    .unwind('from')
                     .then(data => {
-                        res.status(202).json({
-                            data,
-                            status: 'Edit successfully'
+                        return res.status(200).json({
+                            response: data
                         });
-                    })
-                    .catch(error => res.status(404).json({
-                        error: error.message
-                    }));
+                    }).catch(error => res.status(400).send({ error: error.message }));
 
             default:
-                break;
+                return res.status(200).json({
+                    isLoggedIn: true,
+                    success: true,
+                    ...req.user
+                });
         }
-    })
-    .delete('/', isAuthentication, (req, res) => {
-        const { accountId } = req.user;
-        const { view } = req.query;
-        switch (view) {
-            case 'all notification':
-                return Notification.remove({}).then(response => res.status(203).send('deleted all notification')).catch(e => res.status(400).send('delete failed'));
-            default:
-                break;
-        }
-    })
+    } catch (error) {
+        return res.status(401).json({
+            isLoggedIn: false,
+            success: false,
+            error: error.message
+        });
+    }
+
+}).put('/', isAuthentication, (req, res) => {
+    const { accountId } = req.user;
+    const { view } = req.query;
+    switch (view) {
+        case 'profile':
+            const { firstName, lastName, address, phone, introduction, gender, birth } = req.body;
+            const dateOfBirth = new Date(birth);
+            const doc = {
+                firstName,
+                lastName,
+                phone,
+                address,
+                introduction,
+                gender,
+                age: (new Date(Date.now())).getFullYear() - dateOfBirth.getFullYear(),
+            }
+            // 1. Check if account have profile
+            return UserProfile
+                .findOneAndUpdate({ account: accountId }, {
+                    ...doc,
+                    $set: {
+                        account: accountId
+                    }
+                }, { upsert: true, new: true, setDefaultsOnInsert: true })
+                .then(data => {
+                    res.status(202).json({
+                        data,
+                        status: 'Edit successfully'
+                    });
+                })
+                .catch(error => res.status(404).json({
+                    error: error.message
+                }));
+
+        default:
+            break;
+    }
+}).delete('/', isAuthentication, (req, res) => {
+    const { accountId } = req.user;
+    const { view } = req.query;
+    switch (view) {
+        case 'all notification':
+            return Notification.remove({}).then(response => res.status(203).send('deleted all notification')).catch(e => res.status(400).send('delete failed'));
+        default:
+            break;
+    }
+})
 
 router.route('/register')
     .post(async function (req, res) {
-        const { email, username, password, role = "customer", profileImage } = req.body;
+        const { email, username, password, role = roles.STAFF, profileImage } = req.body;
+        const files = req.files;
         try {
             // 1. Validate email and password input are empty
-            if (!email) throw new Error("Fullfill your email");
+            if (!email) throw new Error("Please fulfill your email");
             if (!password) throw new Error("Please input your password");
 
             const duplicateUser = await Account.findOne({ email: email }).exec();
-            const assignedRole = await Role.findOne({ roleName: role }).exec();
+            const isAbsoluteRoleName = Object.entries(roles).some(([key, value]) => value === role);
+
+            let assignedRole;
+            if (isAbsoluteRoleName) {
+                assignedRole = await Role.findOne({ _roleName: role }).exec();
+            }
+            else if (!isAbsoluteRoleName) {
+                assignedRole = await Role.findById(role).exec();
+            }
+
             // 2. Validate user is duplicate and role is existed
             if (duplicateUser) throw new Error("User has been exist");
             if (!assignedRole) throw new Error("There are no capable role to authorize");
 
             // 3. Create and save new Account to database
-            const newAccount = await Account.create({
+            return Account.create({
                 username: username,
                 hashPassword: await bcryptjs.hash(password, 10),
                 email: email,
                 profileImage: profileImage || 'https://laptrinhcuocsong.com/images/anh-vui-lap-trinh-vien-7.png',
                 role: assignedRole && assignedRole._id,
-            }, function (error) {
+            }, function (error, doc) {
                 if (error) {
-                    let error = new Error('Cannot create user');
-                    error.status = 401;
-                    throw error;
+                    return res.status(500).send(error.message);
                 }
+                // 4. Send email for confirmation
+                const emailServ = new EmailService(email, process.env.NODEMAILER_SENDER);
+                return emailServ.sendEmail().then(info => {
+                    // 4.1. Create attachment of client profile image
+                    // 5. Create a new Token and send to user for the further authentication
+                    let token = new Token({
+                        id: doc._id,
+                        roleId: doc.role
+                    });
+
+                    let accessToken = token.createToken();
+                    return res.status(201).json({
+                        isLoggedIn: true,
+                        success: true,
+                        message: 'User has been created',
+                        accessToken,
+                        account: doc.username,
+                        role: role,
+                        info
+                    });
+                }).catch(error => {
+                    Account.findByIdAndRemove(doc._id);
+                    return res.status(501).json({ error: error.message });
+                });
             });
-
-            // 4. Send email for confirmation
-            const emailServ = new EmailService(email, process.env.NODEMAILER_SENDER);
-            emailServ.sendEmail();
-
-            // 5. Create a new Token and send to user for the further authentication
-            let token = new Token({
-                id: newAccount._id,
-                roleId: newAccount.role._id
-            });
-
-            let accessToken = token.createToken();
-            Token.sendToken(201, accessToken, res).json({
-                isLoggedIn: true,
-                success: true,
-                message: 'User has been created',
-                accessToken,
-                account: newAccount.username,
-                role: role
-            })
-
-        } catch (err) {
-            res.status(err.status || 400).send({
+        }
+        catch (err) {
+            return res.status(err.status || 500).send({
                 isLoggedIn: false,
                 success: false,
                 error: err.message,
-            })
+            });
         }
     });
 
@@ -243,7 +254,7 @@ router.post('/forgot', async function (req, res, next) {
         if (!isCapable) throw new Error("your password is incorrect");
 
         res.send({
-            message: "Login successfully"
+            message: "Change password successfully"
         })
     } catch (err) {
         res.send({

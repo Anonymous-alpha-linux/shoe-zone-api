@@ -3,6 +3,8 @@ const { UserProfile, Account, Post, Attachment, Category, Workspace, Comment } =
 var router = express.Router();
 const { cloudinary } = require('../utils');
 const mongoose = require("mongoose");
+const { roles } = require("../fixtures");
+const { workspaceCtrl, accountCtrl } = require("../controllers");
 
 let filter_actions = {
   DEFAULT: 0,
@@ -16,7 +18,7 @@ router.route("/")
   .get(async (req, res) => {
     let { view, page = 0, filter = filter_actions.DEFAULT,
       count = 2, id = 0, postid, commentid, accountid, workspaceid } = req.query;
-    let { accountId, roleId, workspace } = req.user;
+    let { accountId } = req.user;
     try {
       switch (view) {
         case 'query':
@@ -54,13 +56,7 @@ router.route("/")
             }))
             .catch(e => res.status(400).send(e.message));
         case 'workspace':
-          return Workspace.aggregate()
-            .match({ members: { $in: [mongoose.Types.ObjectId(accountId)] } })
-            .then(data => {
-              return res.status(200).json({
-                response: data
-              });
-            }).catch(error => res.status(400).json({ message: error.message }));
+          return workspaceCtrl.getWorkspaceListByPage(req, res);
         case 'singleworkspace':
           return Workspace.findById(workspaceid).then(data => res.status(200).json({ response: data })).catch(error => res.status(401).send(error.message));
         case 'manager':
@@ -510,6 +506,8 @@ router.route("/")
             .then(data => res.status(200).json({
               response: data
             })).catch(error => res.status(400).send(error.message));
+        case 'member':
+          return accountCtrl.getAccountListByWorkspaceId(req, res);
         default:
           return res.status(404).send('Not found query');
       }

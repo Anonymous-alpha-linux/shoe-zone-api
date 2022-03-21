@@ -24,9 +24,8 @@ module.exports = class Token {
         return jwt.verify(token, process.env.JSON_REFRESH_TOKEN)
     }
     static sendToken(status, accessToken, res) {
-        console.log('send token');
         return res.status(status).cookie('accessToken', accessToken, {
-            httpOnly: true,
+            // httpOnly: true
         });
     }
 }

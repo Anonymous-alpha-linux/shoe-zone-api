@@ -50,11 +50,14 @@ server.use('/public', express.static(path.join(__dirname, 'public')))
 // server.use('/avatar', express.static('avatar'));
 // 2. Authentication
 // 2.1. authentications
-server.use('/api/v1/auth', routes.auth);
+server.use('/api/v1/auth',
+    multer.array('files'),
+    routes.auth
+);
 // 2.2. admin
 server.use('/api/v1/admin',
     isAuthentication,
-    isAuthorization(roles.ADMIN),
+    isAuthorization(roles.ADMIN, roles.QA_MANAGER),
     multer.array('files'),
     routes.admin);
 // 2.3. staff
@@ -66,7 +69,7 @@ server.use('/api/v1/staff',
 // 2.5. manager
 server.use('/api/v1/manager',
     isAuthentication,
-    isAuthorization(roles.STAFF, roles.QA_COORDINATOR, roles.QA_MANAGER, roles.ADMIN),
+    isAuthorization(roles.QA_COORDINATOR, roles.QA_MANAGER, roles.ADMIN),
     multer.array('files'),
     routes.QA_manager);
 // 2.4. customer
@@ -85,8 +88,7 @@ server.get("/api/v1/download",
         console.log(foundAttachments.map(a => a.fileName));
         try {
             const result = cloudinary.utils.download_zip_url({ resource_type: 'all', public_ids: foundAttachments.map(attach => attach.fileName) });
-            console.log(result);
-            res.status(200).send('download item');
+            res.status(200).json({ response: result, message: 'download item' });
         }
         catch (error) {
             res.status(500).send('Cannot download this item')
