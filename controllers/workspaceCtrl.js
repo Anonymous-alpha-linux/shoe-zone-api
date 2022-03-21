@@ -1,5 +1,6 @@
 const { Workspace } = require("../models");
 const { roles } = require("../fixtures");
+const mongoose = require('mongoose');
 
 module.exports.getAllWorkspace = function (req, res) {
     if ([roles.ADMIN, roles.QA_MANAGER].includes(req.user.role)) {
