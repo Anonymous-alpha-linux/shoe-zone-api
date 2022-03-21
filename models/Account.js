@@ -27,6 +27,10 @@ const accountSchema = new Schema({
         type: Date,
         default: Date.now(),
     },
+    blocked: {
+        type: Boolean,
+        default: false
+    },
     role: {
         type: Schema.Types.ObjectId,
         ref: 'Role',
@@ -36,7 +40,7 @@ const accountSchema = new Schema({
         type: SchemaTypes.ObjectId,
         ref: 'Workspace',
         required: false,
-        default: '61f7bc0f4116f253caf86586'
+        default: SchemaTypes.ObjectId('61e4d0d40226255275aaabb0')
     },
     // notifications: [{
     //     isRead: {

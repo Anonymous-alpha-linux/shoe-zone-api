@@ -259,6 +259,21 @@ router.route('/')
                 return res.status(501).send("There are no service for this query!");
         }
     })
+    .delete(async function (req, res) {
+        const { accountid } = req.query;
+
+        return Workspace.findOneAndUpdate({ members: { $in: accountid }, manager: { $eq: accountid } }, {
+        }, null, (error, doc) => {
+            if (error) return res.status(500).json({ error: 'You cannot delete account from here!' });
+            return Account.findByIdAndRemove(accountid).then(data => res.status(204).json({
+                message: 'Deleted account successfully',
+                ok: true,
+
+            })).catch(error => res.status(500).json({
+                error: error.message
+            }));
+        })
+    });
 
 
 // router.post('/manage/createRole', async function (req, res, next) {
