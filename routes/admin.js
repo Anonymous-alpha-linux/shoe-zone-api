@@ -53,7 +53,6 @@ router.route('/')
         const files = req.files;
         switch (view) {
             case 'account':
-
                 const { email, username, password, role = roles.STAFF, profileImage } = req.body;
                 async function updateEmail(email) {
                     try {
