@@ -154,11 +154,12 @@ router.route('/register')
 
                     let accessToken = token.createToken();
                     return res.status(201).json({
-                        isLoggedIn: true,
+                        // isLoggedIn: true,
                         success: true,
                         message: 'User has been created',
                         accessToken,
                         account: doc.username,
+                        response: doc,
                         role: role,
                         info
                     });
