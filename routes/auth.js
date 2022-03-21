@@ -160,7 +160,7 @@ router.route('/register')
                         accessToken,
                         account: doc.username,
                         response: {
-                            ...doc,
+                            ...doc._doc,
                             role: assignedRole
                         },
                         role: role,
