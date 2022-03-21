@@ -65,7 +65,7 @@ router.route('/')
                         const duplicateUser = await Account.findOne({ email: email }).exec();
                         if (duplicateUser)
                             return res.status(500).json({
-                                error: "User has been exist"
+                                error: "Email has been exist"
                             });
 
                         // 2. Verify Email account
@@ -226,7 +226,10 @@ router.route('/')
                         }).then(data => res.status(202).json({
                             message: "Update account\'s role successfully!",
                             info,
-                            response: data
+                            response: {
+                                ...data,
+                                role: assignedRole
+                            }
                         })).catch(error => res.status(500).json({
                             error: "Role has failed to change"
                         }));
