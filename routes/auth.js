@@ -159,7 +159,10 @@ router.route('/register')
                         message: 'User has been created',
                         accessToken,
                         account: doc.username,
-                        response: doc,
+                        response: {
+                            ...doc,
+                            role: assignedRole
+                        },
                         role: role,
                         info
                     });
