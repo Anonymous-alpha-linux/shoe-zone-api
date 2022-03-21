@@ -53,6 +53,7 @@ router.route('/')
         const files = req.files;
         switch (view) {
             case 'account':
+
                 const { email, username, password, role = roles.STAFF, profileImage } = req.body;
                 async function updateEmail(email) {
                     try {
@@ -166,7 +167,7 @@ router.route('/')
                                 folder: path,
                                 filename_override: `Avatar`,
                                 use_filename: true,
-                                unique_filename: true,
+                                unique_filename: false,
                                 resource_type: 'auto',
                                 // format: fileExtension[0]
                             }, function (error, result) {
@@ -235,7 +236,8 @@ router.route('/')
                 try {
                     // 1. Validate email and password input are empty
                     if (option == options.CHANGE_USERNAME) {
-                        updateUsername(username);
+
+                        return updateUsername(username);
                     }
                     else if (option == options.CHANGE_EMAIL) {
                         updateEmail(email);
