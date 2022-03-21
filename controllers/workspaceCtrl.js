@@ -31,7 +31,7 @@ module.exports.getWorkspaceListByPage = function (req, res) {
     }
     else {
         return Workspace.aggregate()
-            .match({ members: { $in: [mongoose.Types.ObjectId(accountId)] } })
+            .match({ members: { $in: [mongoose.Types.ObjectId(req.user.accountId)] } })
             .then(data => {
                 return res.status(200).json({
                     response: data
