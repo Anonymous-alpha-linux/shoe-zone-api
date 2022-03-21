@@ -235,20 +235,19 @@ router.route('/')
                 try {
                     // 1. Validate email and password input are empty
                     if (option == options.CHANGE_USERNAME) {
-
                         return updateUsername(username);
                     }
                     else if (option == options.CHANGE_EMAIL) {
-                        updateEmail(email);
+                        return updateEmail(email);
                     }
                     else if (option == options.CHANGE_PASSWORD) {
-                        updatePassword(password);
+                        return updatePassword(password);
                     }
                     else if (option == options.CHANGE_AVATAR) {
-                        updateAvatar(files[0]);
+                        return updateAvatar(files[0]);
                     }
                     else if (option == options.CHANGE_ROLE) {
-                        updateRole(role);
+                        return updateRole(role);
                     }
                 } catch (error) {
                     return res.status(500).send("Server Error: " + error.message);
