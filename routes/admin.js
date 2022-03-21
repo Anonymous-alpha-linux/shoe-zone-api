@@ -50,7 +50,6 @@ router.route('/')
     })
     .put(async function (req, res) {
         const { view, accountid, option } = req.query;
-        console.log(req.query);
         const files = req.files;
         switch (view) {
             case 'account':
@@ -110,7 +109,6 @@ router.route('/')
                     const emailService = new EmailService(accountEmail, process.env.NODEMAILER_SENDER);
                     return emailService.sendEmail(htmlContent).then(async info => {
                         // 3. Update new password to account
-                        console.log('get info after sending email', info);
                         return await Account.findByIdAndUpdate(accountid, {
                             hashPassword: await bcryptjs.hash(password, 10)
                         }).then(data => res.status(202).json({

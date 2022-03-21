@@ -18,7 +18,7 @@ router.route("/")
   .get(async (req, res) => {
     let { view, page = 0, filter = filter_actions.DEFAULT,
       count = 2, id = 0, postid, commentid, accountid, workspaceid } = req.query;
-    let { accountId } = req.user;
+    let { accountId, workspace } = req.user;
     try {
       switch (view) {
         case 'query':
@@ -58,7 +58,10 @@ router.route("/")
         case 'workspace':
           return workspaceCtrl.getWorkspaceListByPage(req, res);
         case 'singleworkspace':
-          return Workspace.findById(workspaceid).then(data => res.status(200).json({ response: data })).catch(error => res.status(401).send(error.message));
+          return workspaceCtrl.getAssignedWorkspace(req, res);
+        case 'myworkspace':
+          console.log(req.user);
+          return workspaceCtrl.getAssignedWorkspace(req, res);
         case 'manager':
           return Promise.all([
             Account.findById(accountid, "", {

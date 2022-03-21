@@ -1,7 +1,7 @@
 const { Workspace } = require("../models");
 const { roles } = require("../fixtures");
 
-module.exports.getAllWorkspace = function (req, res, options) {
+module.exports.getAllWorkspace = function (req, res) {
     if ([roles.ADMIN, roles.QA_MANAGER].includes(req.user.role)) {
         return Workspace.find().then(data => res.status(200).json({
             response: data,
@@ -11,7 +11,6 @@ module.exports.getAllWorkspace = function (req, res, options) {
         }));
     }
     else {
-
         return res.status(403).json({
             error: 'You\'re not authorized for this feature'
         })
@@ -20,10 +19,12 @@ module.exports.getAllWorkspace = function (req, res, options) {
 module.exports.getWorkspaceListByPage = function (req, res) {
     const { page, amount } = req.query;
     if ([roles.ADMIN, roles.QA_MANAGER].includes(req.user.role)) {
-        return Workspace.find().skip(Number(page) * Number(amount)).limit(Number(amount)).then(data => res.status(200).json({
-            response: data,
-            message: 'get all workspace items'
-        })).catch(error => res.status(400).json({
+        return Workspace.find().skip(Number(page) * Number(amount)).limit(Number(amount)).then(data => {
+            return res.status(200).json({
+                response: data,
+                message: 'get all workspace items'
+            });
+        }).catch(error => res.status(400).json({
             error: error.message
         }));
     }
@@ -52,8 +53,8 @@ module.exports.getWorkspaceByDate = function (req, res) {
         error: error.message
     }))
 }
-module.exports.getSingleWorkspaceById = function (req, res) {
-    return Workspace.findById(id)
+module.exports.getAssignedWorkspace = function (req, res) {
+    return Workspace.findById(req.user.workspace)
         .then(data => res.status(200).json({ response: data, message: 'get single workspace successfully' }))
         .catch(error => res.status(500).json({ error: error.message }));
 }

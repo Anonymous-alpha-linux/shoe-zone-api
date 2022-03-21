@@ -30,7 +30,7 @@ router.route('/')
     })
     .post(async (req, res) => {
         const { view, page = 0, filter = filter_actions,
-            count = 2, id = 0, postid, commentid, accountid } = req.query;
+            count = 2, id = 0 } = req.query;
         let { accountId, roleId, workspace } = req.user;
         switch (view) {
             case 'workspace':
