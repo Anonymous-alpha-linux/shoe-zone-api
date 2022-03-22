@@ -83,10 +83,10 @@ server.get("/api/v1/download",
     isAuthorization(roles.ADMIN, roles.QA_COORDINATOR, roles.QA_MANAGER),
     async function (req, res) {
         const { postid } = req.query;
-        const { attachments } = await Post.findById(postid);
-        const foundAttachments = await Attachment.where({ _id: { $in: attachments } });
-        console.log(foundAttachments.map(a => a.fileName));
         try {
+            if (!postid) return res.status.json({ error: 'Specify your postid' });
+            const foundAttachments = await Attachment.where({ _id: { $in: attachments } });
+            const { attachments } = await Post.findById(postid);
             const result = cloudinary.utils.download_zip_url({ resource_type: 'all', public_ids: foundAttachments.map(attach => attach.fileName) });
             res.status(200).json({ response: result, message: 'download item' });
         }
