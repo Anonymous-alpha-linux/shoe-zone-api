@@ -1,6 +1,6 @@
 // const mongo = require('mongodb');
 // const { MongoContext } = require('../config');
-const { Schema, model, SchemaTypes } = require('mongoose');
+const { Schema, model, SchemaTypes, Types } = require('mongoose');
 
 const accountSchema = new Schema({
     username: {
@@ -40,7 +40,7 @@ const accountSchema = new Schema({
         type: SchemaTypes.ObjectId,
         ref: 'Workspace',
         required: false,
-        default: SchemaTypes.ObjectId('61e4d0d40226255275aaabb0')
+        default: Types.ObjectId('61e4d0d40226255275aaabb0')
     },
     // notifications: [{
     //     isRead: {

@@ -1,6 +1,6 @@
 var express = require('express');
 const { workspaceCtrl, accountCtrl } = require('../controllers');
-const { Category, Workspace, Account } = require('../models');
+const { Category, Workspace, Account, Attachment } = require('../models');
 var router = express.Router();
 let filter_actions = {
     DEFAULT: 0,
@@ -24,6 +24,8 @@ router.route('/')
             case 'category':
                 return Category.find().then(data => res.status(200).json({ response: data }))
                     .catch(error => res.status(401).send('Get categories failed'));
+            case 'attachment':
+                return Attachment.find().skip(page * count).limit(count).then(data => res.status(200).json({ response: data, message: 'get all attachments successfully' })).catch(error => res.status(500).json({ error: error.message }));
             default:
                 return res.status(500).send("Don't find query");
         }
