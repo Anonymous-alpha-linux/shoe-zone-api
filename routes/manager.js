@@ -11,13 +11,13 @@ let filter_actions = {
 
 /* GET home page. */
 router.route('/')
-    .get((req, res, next) => {
+    .get(async (req, res, next) => {
         let { view, page = 0, filter = filter_actions.DEFAULT,
-            count = 2, id = 0, postid, commentid, accountid } = req.query;
+            count = 2, id = 0 } = req.query;
+        page = Number(page);
+        count = Number(count);
         switch (view) {
             case 'workspace':
-                page = Number(page);
-                count = Number(count);
                 return Workspace.find().skip(page * count).limit(count).then(data => res.status(200).json({ response: data, message: 'Get all workspace' })).catch(error => res.status.json({ error: error.message }));
             case 'account':
                 return Account.find().then(data => res.status(200).json({ response: data })).catch(error => res.status(500).send(error.message));
@@ -25,7 +25,10 @@ router.route('/')
                 return Category.find().then(data => res.status(200).json({ response: data }))
                     .catch(error => res.status(401).send('Get categories failed'));
             case 'attachment':
-                return Attachment.find().skip(page * count).limit(count).then(data => res.status(200).json({ response: data, message: 'get all attachments successfully' })).catch(error => res.status(500).json({ error: error.message }));
+                const attachmentCount = await Attachment.count();
+                return Attachment.find().skip(page * count).limit(count)
+                    .then(data => res.status(200).json({ response: data, message: 'get all attachments successfully', attachmentCount, pages: attachmentCount % count === 0 ? attachmentCount / count : Math.floor(attachmentCount / count) + 1 }))
+                    .catch(error => res.status(500).json({ error: error.message }));
             default:
                 return res.status(500).send("Don't find query");
         }

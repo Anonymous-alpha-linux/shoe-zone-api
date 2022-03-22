@@ -60,7 +60,6 @@ router.route("/")
         case 'singleworkspace':
           return workspaceCtrl.getAssignedWorkspace(req, res);
         case 'myworkspace':
-          console.log(req.user);
           return workspaceCtrl.getAssignedWorkspace(req, res);
         case 'manager':
           return Promise.all([

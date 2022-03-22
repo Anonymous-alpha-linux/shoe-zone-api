@@ -18,26 +18,31 @@ module.exports.getAllWorkspace = function (req, res) {
     }
 }
 module.exports.getWorkspaceListByPage = function (req, res) {
-    const { page, amount } = req.query;
+    const { page, count } = req.query;
     if ([roles.ADMIN, roles.QA_MANAGER].includes(req.user.role)) {
-        return Workspace.find().skip(Number(page) * Number(amount)).limit(Number(amount)).then(data => {
-            return res.status(200).json({
-                response: data,
-                message: 'get all workspace items'
-            });
-        }).catch(error => res.status(400).json({
-            error: error.message
-        }));
-    }
-    else {
-        return Workspace.aggregate()
-            .match({ members: { $in: [mongoose.Types.ObjectId(req.user.accountId)] } })
+        const documentAmount = Workspace.count();
+        return Workspace.find()
+            .skip(Number(page) * Number(count))
+            .limit(Number(count))
             .then(data => {
                 return res.status(200).json({
-                    response: data
+                    response: data,
+                    pages: documentAmount / count,
+                    message: 'get all workspace items',
                 });
-            }).catch(error => res.status(400).json({ message: error.message }));
+            })
+            .catch(error => res.status(400).json({
+                error: error.message
+            }));
     }
+    return Workspace.aggregate()
+        .match({ members: { $in: [mongoose.Types.ObjectId(req.user.accountId)] } })
+        .then(data => {
+            return res.status(200).json({
+                response: data
+            });
+        })
+        .catch(error => res.status(400).json({ message: error.message }));
 }
 module.exports.getWorkspaceByMemberID = function (req, res, memberId) {
     return Workspace.where({ members: memberId }).then(data => res.status(200).json({
@@ -56,7 +61,10 @@ module.exports.getWorkspaceByDate = function (req, res) {
 }
 module.exports.getAssignedWorkspace = function (req, res) {
     return Workspace.findById(req.user.workspace)
-        .then(data => res.status(200).json({ response: data, message: 'get single workspace successfully' }))
+        .then(data => {
+            console.log(data);
+            return res.status(200).json({ response: data, message: 'get single workspace successfully' })
+        })
         .catch(error => res.status(500).json({ error: error.message }));
 }
 module.exports.assignMembersToWorkspace = function (req, res) {
