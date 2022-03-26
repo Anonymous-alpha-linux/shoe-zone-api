@@ -62,7 +62,6 @@ module.exports.getWorkspaceByDate = function (req, res) {
 module.exports.getAssignedWorkspace = function (req, res) {
     return Workspace.findById(req.user.workspace)
         .then(data => {
-            console.log(data);
             return res.status(200).json({ response: data, message: 'get single workspace successfully' })
         })
         .catch(error => res.status(500).json({ error: error.message }));

@@ -65,6 +65,9 @@ router.get('/', isAuthentication, (req, res) => {
     switch (view) {
         case 'profile':
             const { firstName, lastName, address, phone, introduction, gender, birth } = req.body;
+            if (!address && !phone && !introduction && !gender && !birth) return res.status(200).json({
+                error: 'Complete your input'
+            });
             const dateOfBirth = new Date(birth);
             const doc = {
                 firstName,

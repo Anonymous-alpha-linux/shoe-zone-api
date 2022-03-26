@@ -82,16 +82,39 @@ server.get("/api/v1/download",
     isAuthentication,
     isAuthorization(roles.ADMIN, roles.QA_COORDINATOR, roles.QA_MANAGER),
     async function (req, res) {
-        const { postid } = req.query;
+        const { postid, attachmentid, view } = req.query;
         try {
-            if (!postid) return res.status.json({ error: 'Specify your postid' });
-            const foundAttachments = await Attachment.where({ _id: { $in: attachments } });
-            const { attachments } = await Post.findById(postid);
-            const result = cloudinary.utils.download_zip_url({ resource_type: 'all', public_ids: foundAttachments.map(attach => attach.fileName) });
-            res.status(200).json({ response: result, message: 'download item' });
+            switch (view) {
+                case 'post':
+                    try {
+                        if (!postid) return res.status(400).json({ error: 'Specify your postid' });
+
+                        const foundPost = await Post.findById(postid).exec();
+                        if (!foundPost) return res.status(401).json({ error: 'There are no data about this post' });
+                        const foundAttachments = await Attachment.where({ _id: { $in: foundPost.attachments } });
+                        if (!foundAttachments) return res.status(401).json({ error: 'Not found attachment' });
+
+
+                        const result = cloudinary.utils.download_zip_url({ resource_type: 'all', public_ids: foundAttachments.map(attach => attach.fileName) });
+                        return res.status(200).json({ response: result, message: 'download item' });
+
+                    } catch (error) {
+                        return res.status(500).json({ error: 'Cannot download this item', message: error.message })
+                    }
+                case 'singleattachment':
+                    if (!attachmentid) return res.status(500).json({ error: 'Specify your attachmentid' });
+
+                    const foundAttachment = await Attachment.findById(attachmentid).exec();
+                    if (!foundAttachment) return res.status(400).json({ error: 'Cannot find your attachment' });
+
+                    const result = cloudinary.utils.download_zip_url({ resource_type: 'all', public_ids: foundAttachment.fileName });
+                    return res.status(200).json({ response: result, message: 'downloaded attachment!' });
+                default:
+                    return res.status(401).json({ error: "Not find query" });
+            }
         }
         catch (error) {
-            res.status(500).send('Cannot download this item')
+
         }
     });
 // 2.5. send email

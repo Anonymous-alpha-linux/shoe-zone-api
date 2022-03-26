@@ -1,6 +1,7 @@
 var express = require('express');
 const { workspaceCtrl, accountCtrl } = require('../controllers');
-const { Category, Workspace, Account, Attachment } = require('../models');
+const { Category, Workspace, Account, Attachment, Post } = require('../models');
+const { cloudinary } = require('../utils');
 var router = express.Router();
 let filter_actions = {
     DEFAULT: 0,
@@ -18,7 +19,8 @@ router.route('/')
         count = Number(count);
         switch (view) {
             case 'workspace':
-                return Workspace.find().skip(page * count).limit(count).then(data => res.status(200).json({ response: data, message: 'Get all workspace' })).catch(error => res.status.json({ error: error.message }));
+                const workspaceCount = await Workspace.count();
+                return Workspace.find().skip(page * count).limit(count).then(data => res.status(200).json({ response: data, totalWorkspace: workspaceCount, message: 'Get all workspace' })).catch(error => res.status.json({ error: error.message }));
             case 'account':
                 return Account.find().then(data => res.status(200).json({ response: data })).catch(error => res.status(500).send(error.message));
             case 'category':
@@ -29,6 +31,21 @@ router.route('/')
                 return Attachment.find().skip(page * count).limit(count)
                     .then(data => res.status(200).json({ response: data, message: 'get all attachments successfully', attachmentCount, pages: attachmentCount % count === 0 ? attachmentCount / count : Math.floor(attachmentCount / count) + 1 }))
                     .catch(error => res.status(500).json({ error: error.message }));
+            case 'overview':
+                try {
+                    const totalWorkspace = await Workspace.count();
+                    const totalPost = await Post.count();
+                    const totalUser = await Account.count();
+                    return res.status(200).json({
+                        totalWorkspace,
+                        totalPost,
+                        totalUser
+                    })
+                } catch (error) {
+                    return res.status(500).json({
+                        error: 'Server got error'
+                    })
+                }
             default:
                 return res.status(500).send("Don't find query");
         }
@@ -66,7 +83,7 @@ router.route('/')
         }
     })
     .put(async (req, res) => {
-        let { view, option } = req.query;
+        let { view, option, attachmentid } = req.query;
         const options = {
             ASSIGN_MEMBERS_TO_WORKSPACE: 0,
             SET_CLOSURE_TIME: 1,
@@ -82,6 +99,31 @@ router.route('/')
                 return workspaceCtrl.assignMembersToWorkspace(req, res);
             case 'account':
                 return accountCtrl.assignRoleToAccount(req, res);
+            case 'attachment':
+                async function clearAttachmentOnCloudinary() {
+                    const { attachments } = await Post.findById(postid).exec();
+                    return new Promise(resolve => {
+                        Attachment.where({ _id: { $in: attachments } })
+                            .then(result => {
+                                return Promise.all(result.map(attach => {
+                                    return new Promise((resolve) => {
+                                        cloudinary.uploader.destroy(attach.fileName, { resource_type: attach.fileType.split('/')[0] }, function (error, result) {
+                                            if (error) throw new Error(error);
+                                            resolve(result);
+                                        });
+                                        removeAttachmentOnMongo(attach._id);
+                                    })
+                                }));
+                            })
+                            .then(data => {
+                                resolve(data);
+                            })
+                            .catch(error => res.status(500).send("Cannot clear attachment from Cloudinary"));
+                    })
+                }
+                return Attachment.findByIdAndRemove(attachmentid).then(data => res.status(200).json({
+                    message: 'deleted attachment',
+                })).catch(error => res.status(500).json({ error: 'This attachment cannot be deleted' }));
             default:
                 return res.status(501).json({
                     error: "There are no service for this query"
@@ -90,13 +132,31 @@ router.route('/')
     })
     .delete(async (req, res) => {
         const { view, page = 0, filter = filter_actions,
-            count = 2, id = 0, postid, commentid, accountid } = req.query;
+            count = 2, id = 0, postid, commentid, categoryid, accountid, attachmentid } = req.query;
         switch (view) {
             case 'category':
-                return Category.findByIdAndRemove(commentid).then(data => res.status(200).json({ response: commentid, message: 'deleted category' })).catch(error => res.status(500).send("delete failed"))
-
+                if (!categoryid) return res.status(401).json({ error: 'Please send your categoryid' })
+                return Category.findByIdAndRemove(categoryid).then(data => res.status(200).json({ response: categoryid, message: 'deleted category' })).catch(error => res.status(500).send("delete failed"));
+            case 'attachment':
+                // 1. Validate attachmentid parametter
+                if (!attachmentid) return res.status(500).json({ error: 'Please send your attachmentid' });
+                function removeAttachmentOnCloudinary(attach) {
+                    return new Promise((resolve, reject) => {
+                        cloudinary.uploader.destroy(attach.fileName, { resource_type: attach.fileType.split('/')[0] }, function (error, result) {
+                            if (error) return res.status(500).json({ error: error.message });
+                            resolve(result);
+                        });
+                    })
+                }
+                return Attachment.findByIdAndRemove(attachmentid).then(doc => {
+                    removeAttachmentOnCloudinary(doc);
+                    return Post.findOneAndUpdate({ attachments: { $in: attachmentid } }, { $pull: { attachments: attachmentid } });
+                })
+                    .catch(error => res.status(500).json({ error: "Cannot delete attachment" }))
+                    .then(doc => res.status(202).json({ message: 'Deleted attachment successfully!' }))
+                    .catch(err => res.status(500).json({ error: "Cannot pull attachment on post" }))
             default:
-                break;
+                return res.status(401).json({ error: "Not Find Your Query" })
         }
     })
 

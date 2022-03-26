@@ -479,7 +479,7 @@ router.route("/")
               reply: { $size: '$replies' },
               replies: 1,
             })
-            .sort({ createdAt: 1 })
+            .sort({ createdAt: -1, like: -1 })
             .skip(page * count)
             .limit(count)
             .lookup({ from: 'accounts', as: 'account', localField: 'account', foreignField: '_id' })
@@ -527,7 +527,8 @@ router.route("/")
     try {
       switch (view) {
         case 'post':
-          const { content, categories, private } = req.body;
+          const { title, content, categories, private } = req.body;
+          if (!title || !content || !categories || !private) return res.status(401).json({ error: 'Please send your request' });
           function createFolderOnCloudinary() {
             return new Promise((resolve, reject) => {
               cloudinary.api.create_folder(`CMS_STAFF/[${role.toUpperCase()}]-${email}`, {
@@ -593,24 +594,10 @@ router.route("/")
                 resolve(docs);
               })
             });
-            // return new Promise((resolve, reject) => {
-            //   return Attachment.create({
-            //     fileName: public_id,
-            //     filePath: secure_url || url,
-            //     fileType: `${resource_type}/${format || 'document'}`,
-            //     fileFormat: format,
-            //     fileSize: bytes,
-            //     post: postId,
-            //     createdAt: created_at,
-            //     online_url: secure_url || url,
-            //     api_key: api_key,
-            //     signature,
-            //     downloadable: true
-            //   }).then(attachment => resolve(attachment)).catch(error => reject(error));
-            // })
           }
           function createNewPost(files) {
             return Post.create({
+              title,
               content,
               postAuthor: accountId,
               categories: categories,
@@ -631,12 +618,16 @@ router.route("/")
               return createAttachmentFromCloudinary(uploadFiles);
             })
             .then(attachmentList => {
-              return createNewPost(attachmentList);
+              return Promise.all([createNewPost(attachmentList), attachmentList]);
             })
             // 4. Find post
             .then(data => {
+              const [post, attachmentList] = data;
+              attachmentList.forEach(attachment => {
+                attachment.post = post._id;
+              });
               return res.status(200).json({
-                response: [data],
+                response: [post],
                 message: 'Post successfully',
               });
             })
@@ -699,8 +690,8 @@ router.route("/")
     try {
       switch (view) {
         case 'profile':
-          // const { firstName, lastName, age, phone, address } = req.body;
-          const { introduction, gender, birth } = req.body;
+          const { firstName, lastName, age, phone, address, introduction, gender, birth } = req.body;
+          console.log(req.body);
           const dateOfBirth = new Date(birth);
           const doc = {
             firstName,
@@ -987,7 +978,6 @@ router.route("/")
             .catch(error => res.status(400).send(error.message));
         case 'eventtime':
           const eventTime = new Date().setDate(new Date(Date.now()).getDate() + 37);
-
           return Workspace
             .update({ _id: req.user.workspace },
               {
@@ -1001,6 +991,15 @@ router.route("/")
               message: 'Set the event time successfully'
             }))
             .catch(error => res.status(400).send(error.message));
+        case 'accountworkspace':
+          const { workspaceid } = req.body;
+          if (!workspaceid) return res.status(401).json({ error: 'Please send your workspaceid' });
+          const foundWorkspace = await Workspace.where(workspaceid).findOne({ members: { $in: req.user.accountId } }).exec();
+          if (!foundWorkspace) res.status(401).json({ error: "This workspaceid or your account cannot be included" });
+
+          return Account.findByIdAndUpdate(req.user.accountId, {
+            workspace: workspaceid
+          }).then(data => res.status(201).json({ message: 'Update current workspaceid successfully!', response: foundWorkspace })).catch(error => res.status(500).json({ error: 'Cannot change now!' }));
         default:
           res.status(404).json({
             error: 'Not found query'
@@ -1031,7 +1030,7 @@ router.route("/")
                         resolve(result);
                       });
                       removeAttachmentOnMongo(attach._id);
-                    })
+                    });
                   }));
                 })
                 .then(data => {

@@ -260,18 +260,19 @@ router.route('/')
         }
     })
     .delete(async function (req, res) {
-        const { accountid } = req.query;
+        const { accountid, view } = req.query;
+        // switch (view) {
+        //     case 'workspace':
 
+        //         break;
+
+        //     default:
+        //         break;
+        // }
         return Workspace.findOneAndUpdate({ members: { $in: accountid }, manager: { $eq: accountid } }, {
         }, null, (error, doc) => {
             if (error) return res.status(500).json({ error: 'You cannot delete account from here!' });
-            return Account.findByIdAndRemove(accountid).then(data => res.status(204).json({
-                message: 'Deleted account successfully',
-                ok: true,
-
-            })).catch(error => res.status(500).json({
-                error: error.message
-            }));
+            return Account.findByIdAndRemove(accountid).then(data => res.status(204).json({ message: 'Deleted account successfully', ok: true, })).catch(error => res.status(500).json({ error: error.message }));
         })
     });
 
