@@ -66,6 +66,17 @@ module.exports.getAssignedWorkspace = function (req, res) {
         })
         .catch(error => res.status(500).json({ error: error.message }));
 }
+module.exports.assignWorkspaceManager = async function (req, res) {
+    const { workspaceid } = req.query;
+    const { accountid } = req.body;
+    if (!workspaceid && !accountid) return res.status(401).json({ error: 'Please send your workspaceid' });
+    const foundWorkspace = await Workspace.where(workspaceid).findOne({ members: { $in: req.user.accountId } }).exec();
+    if (!foundWorkspace) return res.status(401).json({ error: "This workspaceid or your account cannot be included" });
+
+    return Workspace.findByIdAndUpdate(workspaceid, { manager: accountid })
+        .then(data => res.status(200).json({ message: "Update workspace manager successfully!", response: data }))
+        .catch(error => res.status(500).json({ error: "Cannot get data" }));
+}
 module.exports.assignMembersToWorkspace = function (req, res) {
     const { accounts } = req.body;
     if (!Array.isArray(accounts)) {
@@ -85,4 +96,36 @@ module.exports.assignMembersToWorkspace = function (req, res) {
         response: data,
         message: `Added members to workspace ${data._id} successfully!`
     }));
+}
+module.exports.assignMemberToWorkspace = function (req, res) {
+    const { workspaceid } = req.query;
+    const { accountid } = req.body;
+    if (!workspaceid || !accountid) return res.status(401).json({ error: 'Send your request information' });
+    return Workspace.findByIdAndUpdate(workspaceid, {
+        $addToSet: {
+            members: accountid
+        }
+    }).then(data => {
+        return res.status(201).json({ message: 'Assigned member to workspace successfully!', response: data });
+    }).catch(error => {
+        return res.status(500).json({
+            error: error.message
+        });
+    })
+}
+module.exports.unassignMemberToWorkspace = function (req, res) {
+    const { workspaceid } = req.query;
+    const { accountid } = req.body;
+    if (!workspaceid || !accountid) return res.status(401).json({ error: 'Send your request information' });
+    return Workspace.findByIdAndUpdate(workspaceid, {
+        $pull: {
+            members: accountid
+        }
+    }).then(data => {
+        return res.status(201).json({ message: 'Unassigned member from workspace successfully!', response: data });
+    }).catch(error => {
+        return res.status(500).json({
+            error: error.message
+        });
+    })
 }

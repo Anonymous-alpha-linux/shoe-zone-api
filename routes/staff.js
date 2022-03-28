@@ -82,6 +82,7 @@ router.route("/")
             return Post.aggregate()
               .match({ workspace: workspace })
               .project({
+                title: 1,
                 content: 1,
                 categories: 1,
                 postAuthor: 1,
@@ -114,6 +115,7 @@ router.route("/")
             return Post.aggregate()
               .match({ postAuthor: accountId })
               .project({
+                title: 1,
                 content: 1,
                 categories: 1,
                 postAuthor: 1,
@@ -146,6 +148,7 @@ router.route("/")
             return Post.aggregate()
               .match({ postAuthor: accountId })
               .project({
+                title: 1,
                 content: 1,
                 categories: 1,
                 postAuthor: 1,
@@ -177,6 +180,7 @@ router.route("/")
           return Post.aggregate()
             .match({ workspace: workspace })
             .project({
+              title: 1,
               content: 1,
               categories: 1,
               postAuthor: 1,
@@ -528,7 +532,7 @@ router.route("/")
       switch (view) {
         case 'post':
           const { title, content, categories, private } = req.body;
-          if (!title || !content || !categories || !private) return res.status(401).json({ error: 'Please send your request' });
+          if (!title || !content || !categories) return res.status(401).json({ error: 'Please send your request' });
           function createFolderOnCloudinary() {
             return new Promise((resolve, reject) => {
               cloudinary.api.create_folder(`CMS_STAFF/[${role.toUpperCase()}]-${email}`, {
@@ -719,7 +723,7 @@ router.route("/")
             }));
         case 'post':
           const { email, role } = req.user;
-          const { content, categories, private, isLiked, isDisliked } = req.body;
+          const { title, content, categories, private, isLiked, isDisliked } = req.body;
           const files = req.files;
           function createFolderOnCloudinary() {
             return new Promise((resolve, reject) => {
@@ -815,6 +819,7 @@ router.route("/")
           }
           function updatePost(files) {
             return new Promise((resolve, reject) => Post.findByIdAndUpdate(postid, {
+              title,
               content,
               categories: categories,
               hideAuthor: private,
@@ -861,6 +866,7 @@ router.route("/")
               })).catch(error => res.status(400).send('Cannot liked now'));
             }
           }
+          if (!title || !content || !categories.length) return res.status(401).json({ error: 'Please send your request' });
           // 1. Create a new folder before saving file
           return createFolderOnCloudinary()
             // 2. Upload files to the upset folder
@@ -995,11 +1001,17 @@ router.route("/")
           const { workspaceid } = req.body;
           if (!workspaceid) return res.status(401).json({ error: 'Please send your workspaceid' });
           const foundWorkspace = await Workspace.where(workspaceid).findOne({ members: { $in: req.user.accountId } }).exec();
-          if (!foundWorkspace) res.status(401).json({ error: "This workspaceid or your account cannot be included" });
+          if (!foundWorkspace) return res.status(401).json({ error: "This workspaceid or your account cannot be included" });
 
           return Account.findByIdAndUpdate(req.user.accountId, {
             workspace: workspaceid
           }).then(data => res.status(201).json({ message: 'Update current workspaceid successfully!', response: foundWorkspace })).catch(error => res.status(500).json({ error: 'Cannot change now!' }));
+        case 'assign_workspace_manager':
+          return workspaceCtrl.assignWorkspaceManager(req, res);
+        case 'assign_workspace_member':
+          return workspaceCtrl.assignMemberToWorkspace(req, res);
+        case 'unassign_workspace_member':
+          return workspaceCtrl.unassignMemberToWorkspace(req, res);
         default:
           res.status(404).json({
             error: 'Not found query'

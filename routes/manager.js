@@ -46,6 +46,72 @@ router.route('/')
                         error: 'Server got error'
                     })
                 }
+            case 'mostlikepost':
+                return Post.aggregate()
+                    .project({
+                        title: 1,
+                        content: 1,
+                        categories: 1,
+                        postAuthor: 1,
+                        postOwners: 1,
+                        likedAccounts: 1,
+                        dislikedAccounts: 1,
+                        like: { $size: "$likedAccounts" },
+                        dislike: { $size: "$dislikedAccounts" },
+                        createdAt: 1,
+                        updatedAt: 1,
+                        hideAuthor: 1,
+                        comment: { $size: "$comments" },
+                        attachments: 1,
+                    })
+                    .sort({ "like": -1, "createdAt": -1 })
+                    .limit(3)
+                    .lookup({ from: 'categories', as: 'categories', localField: 'categories', foreignField: '_id', })
+                    .lookup({ from: 'accounts', as: 'postAuthor', localField: 'postAuthor', foreignField: '_id' })
+                    .unwind('postAuthor')
+                    .lookup({ from: 'accounts', as: 'postOwners', localField: 'postOwners', foreignField: '_id' })
+                    .lookup({ from: 'attachments', as: 'attachments', localField: 'attachments', foreignField: '_id' })
+                    .then(data => { return res.status(200).json({ response: data }) }).catch(error => res.status(500).json({ error: error.message }));
+            case 'mostuser':
+                return Post.aggregate()
+                    .project({
+                        title: 1,
+                        content: 1,
+                        categories: 1,
+                        postAuthor: 1,
+                        postOwners: 1,
+                        likedAccounts: 1,
+                        dislikedAccounts: 1,
+                        like: { $size: "$likedAccounts" },
+                        dislike: { $size: "$dislikedAccounts" },
+                        createdAt: 1,
+                        updatedAt: 1,
+                        hideAuthor: 1,
+                        comment: { $size: "$comments" },
+                        attachments: 1,
+                    })
+                    .sort({ "like": -1, "createdAt": -1 })
+                    .limit(3)
+                    .lookup({ from: 'categories', as: 'categories', localField: 'categories', foreignField: '_id', })
+                    .lookup({ from: 'accounts', as: 'postAuthor', localField: 'postAuthor', foreignField: '_id' })
+                    .unwind('postAuthor')
+                    .lookup({ from: 'accounts', as: 'postOwners', localField: 'postOwners', foreignField: '_id' })
+                    .lookup({ from: 'attachments', as: 'attachments', localField: 'attachments', foreignField: '_id' })
+                    .then(data => { console.log(data); return res.status(200).json({ response: data }) }).catch(error => res.status(500).json({ error: error.message }));
+            case 'mostcategory':
+                return Post.aggregate().unwind("categories").group({
+                    _id: '$categories',
+                    count: { $sum: 1 }
+                })
+                    .sort({ count: -1 })
+                    .limit(5)
+                    .lookup({ from: 'categories', as: 'categories', localField: '_id', foreignField: '_id' })
+                    .unwind('categories')
+                    .project({
+                        count: 1,
+                        name: "$categories.name"
+                    })
+                    .then(data => { return res.status(200).json({ response: data }) }).catch(error => res.status(500).json({ error: error.message }));
             default:
                 return res.status(500).send("Don't find query");
         }
