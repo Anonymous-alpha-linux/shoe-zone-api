@@ -8,11 +8,11 @@ const workspaceSchema = new mongoose.Schema({
     },
     expireTime: {
         type: Date,
-        // default: new Date((new Date()).setDate(new Date(Date.now()).getDate() + 30))
+        default: new Date((new Date()).setDate(new Date(Date.now()).getDate() + 30))
     },
     eventTime: {
         type: Date,
-        // default: new Date((new Date()).setDate(new Date(Date.now()).getDate() + 30))
+        default: new Date((new Date()).setDate(new Date(Date.now()).getDate() + 30))
     },
     manager: {
         type: mongoose.Schema.Types.ObjectId,
@@ -25,5 +25,9 @@ const workspaceSchema = new mongoose.Schema({
         required: false
     }]
 });
+
+workspaceSchema.post('findByIdAndUpdate', (res, next) => {
+
+})
 
 module.exports = workspaceSchema;

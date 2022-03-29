@@ -20,6 +20,7 @@ module.exports.getAllWorkspace = function (req, res) {
 module.exports.getWorkspaceListByPage = function (req, res) {
     const { page, count } = req.query;
     if ([roles.ADMIN, roles.QA_MANAGER].includes(req.user.role)) {
+        if (!page || !count) return res.status(401).json({ error: "Please send your request information" });
         const documentAmount = Workspace.count();
         return Workspace.find()
             .skip(Number(page) * Number(count))
@@ -128,4 +129,29 @@ module.exports.unassignMemberToWorkspace = function (req, res) {
             error: error.message
         });
     })
+}
+module.exports.editWorkspace = async function (req, res) {
+    const { workspaceid } = req.query;
+    const { workTitle, closureTime, eventTime } = req.body;
+    if (!workspaceid || !workTitle || !closureTime || !eventTime) return res.status(402).json({ error: "Please send your request information" });
+    try {
+        const updatedWorkspace = await Workspace.findOneAndUpdate({ _id: workspaceid }, {
+            workTitle: workTitle,
+            expireTime: new Date(closureTime),
+            eventTime: new Date(eventTime)
+        });
+        return res.status(200).json({ message: 'Edited workspace successfully', response: updatedWorkspace });
+    }
+    catch (error) {
+        return res.status(500).json({ error: error });
+    }
+    // return Workspace.findByIdAndUpdate(workspaceid, {
+    //     workTitle: workTitle,
+    //     expireTime: new Date(closureTime),
+    //     eventTime: new Date(eventTime)
+    // }, null, (error, result, res) => {
+    //     if (error) return res.status(500).json({ error: error });
+    //     return res.status(202).json({ message: 'Edited workspace successfully', response: result });
+    // });
+
 }

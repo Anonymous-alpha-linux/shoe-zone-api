@@ -967,8 +967,10 @@ router.route("/")
             message: 'Comment successfully'
           })).catch(error => res.status(400).send(error.message));
         case 'timespan':
-          const expireTime = new Date().setDate(new Date(Date.now()).getDate() + 30);
-
+          const { counter } = req.body;
+          if (!counter) return res.status(401).json({ error: 'Please send your request information' });
+          let remainingTime = counter || 30;
+          const expireTime = new Date().setDate(new Date(Date.now()).getDate() + remainingTime);
           return Workspace
             .update({ _id: req.user.workspace },
               {
@@ -997,12 +999,13 @@ router.route("/")
               message: 'Set the event time successfully'
             }))
             .catch(error => res.status(400).send(error.message));
+        case 'workspace':
+          return workspaceCtrl.editWorkspace(req, res);
         case 'accountworkspace':
           const { workspaceid } = req.body;
           if (!workspaceid) return res.status(401).json({ error: 'Please send your workspaceid' });
           const foundWorkspace = await Workspace.where(workspaceid).findOne({ members: { $in: req.user.accountId } }).exec();
           if (!foundWorkspace) return res.status(401).json({ error: "This workspaceid or your account cannot be included" });
-
           return Account.findByIdAndUpdate(req.user.accountId, {
             workspace: workspaceid
           }).then(data => res.status(201).json({ message: 'Update current workspaceid successfully!', response: foundWorkspace })).catch(error => res.status(500).json({ error: 'Cannot change now!' }));
