@@ -4,7 +4,7 @@ var router = express.Router();
 const { cloudinary } = require('../utils');
 const mongoose = require("mongoose");
 const { roles } = require("../fixtures");
-const { workspaceCtrl, accountCtrl } = require("../controllers");
+const { workspaceCtrl, accountCtrl, profileCtrl } = require("../controllers");
 
 let filter_actions = {
   DEFAULT: 0,
@@ -62,19 +62,7 @@ router.route("/")
         case 'myworkspace':
           return workspaceCtrl.getAssignedWorkspace(req, res);
         case 'manager':
-          return Promise.all([
-            Account.findById(accountid, "", {
-              select: { profileImage: 1, username: 1, email: 1, role: 1 },
-              populate: { path: 'role', select: { _id: 0, roleName: 1 } }
-            }),
-            UserProfile.findOne({ account: accountid }, '', {
-              select: { _id: 0, address: 1, age: 7, firstName: 1, lastName: 1, phone: 1, gender: 1, introduction: 1 },
-            })
-          ])
-            .then(data => {
-              const [manager, profile] = data;
-              res.status(200).json({ response: { manager, profile } });
-            }).catch(error => res.status(402).send(error.message));
+          return profileCtrl.getManagerProfile(req, res);
         case 'post':
           page = parseInt(page);
           count = parseInt(count);

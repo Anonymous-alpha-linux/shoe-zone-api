@@ -1,5 +1,6 @@
 const bcryptjs = require('bcryptjs');
 var express = require('express');
+const { workspaceCtrl, profileCtrl } = require('../controllers');
 const { roles } = require('../fixtures');
 const { Account, Role, UserProfile, Notification, Attachment } = require('../models');
 const { EmailService, isAuthentication, isAuthorization, Token } = require('../utils');
@@ -12,21 +13,7 @@ router.get('/', isAuthentication, (req, res) => {
     try {
         switch (view) {
             case 'profile':
-                return UserProfile
-                    .findOne({ account: accountId }, 'account profileImage address introduction gender age firstName lastName phone', {
-                        populate: {
-                            path: 'account',
-                            select: 'role',
-                            populate: {
-                                path: 'role',
-                                select: 'roleName'
-                            }
-                        }
-                    }).then(data => {
-                        res.status(200).json({
-                            response: data
-                        })
-                    }).catch(error => res.status(400).send(error.message));
+                return profileCtrl.getProfileById(req, res);
             case 'notification':
                 page = parseInt(page);
                 count = parseInt(count);
@@ -88,7 +75,7 @@ router.get('/', isAuthentication, (req, res) => {
                 }, { upsert: true, new: true, setDefaultsOnInsert: true })
                 .then(data => {
                     res.status(202).json({
-                        data,
+                        response: data,
                         status: 'Edit successfully'
                     });
                 })

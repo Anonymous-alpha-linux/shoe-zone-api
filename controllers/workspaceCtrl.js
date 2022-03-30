@@ -17,17 +17,18 @@ module.exports.getAllWorkspace = function (req, res) {
         })
     }
 }
-module.exports.getWorkspaceListByPage = function (req, res) {
+module.exports.getWorkspaceListByPage = async function (req, res) {
     const { page, count } = req.query;
     if ([roles.ADMIN, roles.QA_MANAGER].includes(req.user.role)) {
         if (!page || !count) return res.status(401).json({ error: "Please send your request information" });
-        const documentAmount = Workspace.count();
+        const documentAmount = await Workspace.where().count();
         return Workspace.find()
             .skip(Number(page) * Number(count))
             .limit(Number(count))
             .then(data => {
                 return res.status(200).json({
                     response: data,
+                    totalWorkspace: documentAmount,
                     pages: documentAmount / count,
                     message: 'get all workspace items',
                 });

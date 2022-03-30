@@ -1,16 +1,12 @@
 const { Account, Workspace } = require("../models");
 
 module.exports.changePassword = async function (req, res) {
-
 }
 module.exports.changeEmail = async function (req, res) {
-
 }
 module.exports.changeUserName = async function (req, res) {
-
 }
 module.exports.changeAvatar = async function (req, res) {
-
 }
 module.exports.getAccountListByWorkspaceId = async function (req, res) {
     const { workspaceid } = req.query;

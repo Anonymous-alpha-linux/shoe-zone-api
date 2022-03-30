@@ -26,8 +26,4 @@ const workspaceSchema = new mongoose.Schema({
     }]
 });
 
-workspaceSchema.post('findByIdAndUpdate', (res, next) => {
-
-})
-
 module.exports = workspaceSchema;
