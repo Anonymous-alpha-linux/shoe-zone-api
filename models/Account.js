@@ -40,7 +40,7 @@ const accountSchema = new Schema({
         type: SchemaTypes.ObjectId,
         ref: 'Workspace',
         required: false,
-        default: Types.ObjectId('61e4d0d40226255275aaabb0')
+        default: Types.ObjectId('61f7bc0f4116f253caf86586')
     },
     // notifications: [{
     //     isRead: {

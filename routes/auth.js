@@ -45,14 +45,16 @@ router.get('/', isAuthentication, (req, res) => {
             error: error.message
         });
     }
-
 }).put('/', isAuthentication, (req, res) => {
     const { accountId } = req.user;
     const { view } = req.query;
     switch (view) {
         case 'profile':
             const { firstName, lastName, address, phone, introduction, gender, birth } = req.body;
-            if (!address && !phone && !introduction && !gender && !birth) return res.status(200).json({
+            // if (!address && !phone && !introduction && !gender && !birth) return res.status(400).json({
+            //     error: 'Complete your input'
+            // });
+            if (!birth) return res.status(400).json({
                 error: 'Complete your input'
             });
             const dateOfBirth = new Date(birth);
@@ -188,7 +190,7 @@ router.route('/login')
         const { email, password } = req.body;
         try {
             // 1. Validate email, username, password is empty 
-            if (!email) throw new Error("Fullfill your email");
+            if (!email) throw new Error("Fulfill your email");
             if (!password) throw new Error("Please input your password");
 
             // 2. Validate user is existed
@@ -219,7 +221,7 @@ router.route('/login')
             });
 
         } catch (err) {
-            res.status(401).send({
+            return res.status(401).json({
                 isLoggedIn: false,
                 success: false,
                 error: err.message,
