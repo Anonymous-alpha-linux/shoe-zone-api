@@ -39,11 +39,11 @@ router.route('/')
                     return res.status(200).json({
                         totalWorkspace,
                         totalPost,
-                        totaAlUser
+                        totalUser
                     })
                 } catch (error) {
                     return res.status(500).json({
-                        error: 'Server got error'
+                        error: error.message
                     })
                 }
             case 'mostlikepost':
