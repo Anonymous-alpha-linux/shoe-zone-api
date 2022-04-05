@@ -4,7 +4,7 @@ var router = express.Router();
 const { cloudinary } = require('../utils');
 const mongoose = require("mongoose");
 const { roles } = require("../fixtures");
-const { workspaceCtrl, accountCtrl, profileCtrl } = require("../controllers");
+const { workspaceCtrl, accountCtrl, profileCtrl, postCtrl } = require("../controllers");
 
 let filter_actions = {
   DEFAULT: 0,
@@ -502,6 +502,8 @@ router.route("/")
             })).catch(error => res.status(400).send(error.message));
         case 'member':
           return accountCtrl.getAccountListByWorkspaceId(req, res);
+        case 'search':
+          return postCtrl.searchPost(req, res);
         default:
           return res.status(404).send('Not found query');
       }

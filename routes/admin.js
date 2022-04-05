@@ -16,7 +16,7 @@ const options = {
 /* GET home page. */
 router.route('/')
     .get(async function (req, res) {
-        let { view, page = 0, count = 2, id = 0, postid, commentid, accountid } = req.query;
+        let { view, page = 0, count = 2 } = req.query;
         switch (view) {
             case 'account':
                 return Account.find().select({

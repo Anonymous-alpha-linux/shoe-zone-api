@@ -57,7 +57,7 @@ server.use('/api/v1/auth',
 // 2.2. admin
 server.use('/api/v1/admin',
     isAuthentication,
-    isAuthorization(roles.ADMIN, roles.QA_MANAGER),
+    isAuthorization(roles.ADMIN, roles.QA_MANAGER, roles.QA_COORDINATOR, roles.STAFF),
     multer.array('files'),
     routes.admin);
 // 2.3. staff

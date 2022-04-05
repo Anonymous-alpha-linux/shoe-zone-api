@@ -8,6 +8,7 @@ function EmailService(receiver, sender) {
     this.sendEmail = async (htmlContent) => {
         // let testAccount = await nodemailer.createTestAccount();
         let transporter = await nodemailer.createTransport({
+            host: process.env.NODEMAILER_HOST,
             service: 'gmail',// true for 465, false for other ports
             port: 587,
             auth: {

@@ -17,7 +17,6 @@ function connectToMongoDB(callback) {
         .catch(err => {
             console.log('mongo uri', uri);
             console.log("MongoDb cannot connect to server !");
-            console.log(err);
         })
 }
 
