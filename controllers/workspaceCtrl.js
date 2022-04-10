@@ -1,4 +1,4 @@
-const { Workspace } = require("../models");
+const { Workspace, Post } = require("../models");
 const { roles } = require("../fixtures");
 const mongoose = require('mongoose');
 
@@ -19,6 +19,7 @@ module.exports.getAllWorkspace = function (req, res) {
 }
 module.exports.getWorkspaceListByPage = async function (req, res) {
     const { page, count } = req.query;
+    const { workspace } = req.user;
     if ([roles.ADMIN, roles.QA_MANAGER].includes(req.user.role)) {
         if (!page || !count) return res.status(401).json({ error: "Please send your request information" });
         const documentAmount = await Workspace.where().count();
@@ -39,6 +40,8 @@ module.exports.getWorkspaceListByPage = async function (req, res) {
     }
     return Workspace.aggregate()
         .match({ members: { $in: [mongoose.Types.ObjectId(req.user.accountId)] } })
+        .skip(Number(page) * Number(count))
+        .limit(Number(count))
         .then(data => {
             return res.status(200).json({
                 response: data
@@ -61,10 +64,20 @@ module.exports.getWorkspaceByDate = function (req, res) {
         error: error.message
     }))
 }
-module.exports.getAssignedWorkspace = function (req, res) {
-    return Workspace.findById(req.user.workspace)
+module.exports.getAssignedWorkspace = async function (req, res) {
+    const { afterDay = 15 } = req.query;
+    const postNumber = await Post.where({ workspace: req.user.workspace }).countDocuments();
+    const newestPostNumber = await Post.where({ createdAt: { $gte: new Date((new Date().getTime() - (afterDay * 24 * 60 * 60 * 1000))) }, workspace: req.user.workspace }).countDocuments();
+    return Workspace.findById(req.user.workspace).select({
+        workTitle: 1,
+        manager: 1,
+        members: 1,
+        eventTime: 1,
+        expireTime: 1,
+        memberNumber: { $size: "$members" }
+    })
         .then(data => {
-            return res.status(200).json({ response: data, message: 'get single workspace successfully' })
+            return res.status(200).json({ response: { ...data._doc, postNumber, newestPostNumber }, message: 'get single workspace successfully' })
         })
         .catch(error => res.status(500).json({ error: error.message }));
 }

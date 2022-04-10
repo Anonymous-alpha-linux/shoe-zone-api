@@ -327,18 +327,6 @@ router.route("/")
                 foreignField: '_id'
               })
               .unwind('account')
-              .lookup({
-                from: 'accounts',
-                as: 'likedAccounts',
-                localField: 'likedAccounts',
-                foreignField: '_id'
-              })
-              .lookup({
-                from: 'accounts',
-                as: 'dislikedAccounts',
-                localField: 'dislikedAccounts',
-                foreignField: '_id'
-              })
               .then(data => {
                 return res.status(200).json({
                   response: data
@@ -1005,6 +993,57 @@ router.route("/")
           return workspaceCtrl.assignMemberToWorkspace(req, res);
         case 'unassign_workspace_member':
           return workspaceCtrl.unassignMemberToWorkspace(req, res);
+        case 'change_avatar':
+          async function updateAvatar(image) {
+            function createFolderOnCloudinary() {
+              return new Promise((resolve, reject) => {
+                cloudinary.api.create_folder(`CMS_STAFF/[${role.toUpperCase()}]-${email}`, {
+                }, (error, result) => {
+                  if (error) reject(error);
+                  resolve(result);
+                })
+              })
+            }
+            function uploadImageToCloudinaryFolder(folder) {
+              const { path, name } = folder;
+
+              return new Promise((resolve, reject) => {
+                // let fileExtension = /[^.]+$/.exec(file.originalname);
+                cloudinary.uploader.upload(image.path, {
+                  folder: path,
+                  filename_override: `Avatar`,
+                  use_filename: true,
+                  unique_filename: false,
+                  resource_type: 'auto',
+                  // format: fileExtension[0]
+                }, function (error, result) {
+                  if (error) {
+                    return reject(error);
+                  }
+                  resolve(result);
+                });
+              });
+            }
+            // 1. Validate the image request body
+            if (!image) {
+              return res.status(400).json({ error: "Please send your image" });
+            }
+            // 2. Create attachment for avatar resource 
+            return createFolderOnCloudinary().then(folder => uploadImageToCloudinaryFolder(folder)).then(image => {
+              // 3. Update new password to account
+              return Account.findByIdAndUpdate(accountid, {
+                profileImage: image.url || 'https://laptrinhcuocsong.com/images/anh-vui-lap-trinh-vien-7.png'
+              }).then(data => res.status(202).json({
+                message: "Update account\'s avatar successfully!",
+                response: data,
+                image
+              })).catch(error => res.status(500).json({
+                error: "Avatar has failed to change",
+                message: error.message
+              }));
+            }).catch(error => res.status(500).json({ error: `Server Error: ${error.message}` }))
+          }
+          return updateAvatar(req.files[0]);
         default:
           res.status(404).json({
             error: 'Not found query'
